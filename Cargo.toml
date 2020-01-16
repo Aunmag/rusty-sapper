@@ -1,0 +1,8 @@
+[package]
+name = "rusty-sapper"
+version = "1.0.0"
+authors = ["Aunmag <aunmag@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rand = "0.7"
