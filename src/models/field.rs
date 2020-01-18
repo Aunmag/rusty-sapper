@@ -31,7 +31,7 @@ impl Field {
         }
     }
 
-    pub fn discover(&mut self, position: usize) {
+    pub fn discover(&mut self, position: usize) -> bool {
         if !self.has_mines {
             self.generate_mines(position);
             self.has_mines = true;
@@ -39,14 +39,20 @@ impl Field {
 
         let cell = &mut self.cells[position];
 
-        cell.discover();
+        if cell.is_mined {
+            return false;
+        } else {
+            cell.discover();
 
-        if cell.state == CellState::Discovered && self.count_mines(position) == 0 {
-            for i in self.around(position) {
-                if self.cells[i].state == CellState::Undiscovered {
-                    self.discover(i)
+            if cell.state == CellState::Discovered && self.count_mines(position) == 0 {
+                for i in self.around(position) {
+                    if self.cells[i].state == CellState::Undiscovered {
+                        self.discover(i);
+                    }
                 }
             }
+
+            return true;
         }
     }
 

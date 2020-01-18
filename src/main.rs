@@ -46,6 +46,10 @@ fn main() {
         }
 
         if render || update_cursor {
+            if !sapper.is_alive {
+                buffer.add_change("Sorry, but you've taken the wrong step. Game over, press Esc to exit.");
+            }
+
             let (cursor_x, cursor_y) = field.to_position(sapper.position as i32);
 
             buffer.add_change(Change::CursorPosition {
@@ -62,34 +66,43 @@ fn main() {
             Ok(None) => {},
             Ok(Some(input)) => {
                 match input {
-                    InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
-                        sapper._move(0, -1, &field);
-                        update_cursor = true;
-                    }
-                    InputEvent::Key(KeyEvent {key: KeyCode::DownArrow, ..}) => {
-                        sapper._move(0, 1, &field);
-                        update_cursor = true;
-                    }
-                    InputEvent::Key(KeyEvent {key: KeyCode::LeftArrow, ..}) => {
-                        sapper._move(-1, 0, &field);
-                        update_cursor = true;
-                    }
-                    InputEvent::Key(KeyEvent {key: KeyCode::RightArrow, ..}) => {
-                        sapper._move(1, 0, &field);
-                        update_cursor = true;
-                    }
-                    InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
-                        field.mark(sapper.position);
-                        render = true;
-                    }
-                    InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
-                        field.discover(sapper.position);
-                        render = true;
-                    }
                     InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..}) => {
-                        break;
+                        break
                     }
-                    _ => {}
+                    _ => {
+                        if sapper.is_alive {
+                            match input {
+                                InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
+                                    sapper._move(0, -1, &field);
+                                    update_cursor = true;
+                                }
+                                InputEvent::Key(KeyEvent {key: KeyCode::DownArrow, ..}) => {
+                                    sapper._move(0, 1, &field);
+                                    update_cursor = true;
+                                }
+                                InputEvent::Key(KeyEvent {key: KeyCode::LeftArrow, ..}) => {
+                                    sapper._move(-1, 0, &field);
+                                    update_cursor = true;
+                                }
+                                InputEvent::Key(KeyEvent {key: KeyCode::RightArrow, ..}) => {
+                                    sapper._move(1, 0, &field);
+                                    update_cursor = true;
+                                }
+                                InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
+                                    field.mark(sapper.position);
+                                    render = true;
+                                }
+                                InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
+                                    if !field.discover(sapper.position) {
+                                        sapper.is_alive = false;
+                                    }
+
+                                    render = true;
+                                }
+                                _ => {}
+                            }
+                        }
+                    },
                 }
             }
             Err(error) => {
