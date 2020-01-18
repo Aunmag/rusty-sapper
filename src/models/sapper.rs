@@ -39,10 +39,10 @@ impl Sapper {
         let mut result = Option::None;
 
         match s.as_str() {
-            "w" => self.position = field.move_position(self.position, 0, -1).unwrap_or(self.position),
-            "s" => self.position = field.move_position(self.position, 0, 1).unwrap_or(self.position),
-            "a" => self.position = field.move_position(self.position, -1, 0).unwrap_or(self.position),
-            "d" => self.position = field.move_position(self.position, 1, 0).unwrap_or(self.position),
+            "w" => self._move(0, -1, field),
+            "s" => self._move(0, 1, field),
+            "a" => self._move(-1, 0, field),
+            "d" => self._move(1, 0, field),
             " " => result = Option::Some(SapperAction::Discover),
             "m" => result = Option::Some(SapperAction::Mark),
             "q" => result = Option::Some(SapperAction::Quit),
@@ -50,6 +50,12 @@ impl Sapper {
         }
 
         return result;
+    }
+
+    pub fn _move(&mut self, x: i32, y: i32, field: &Field) {
+        if let Option::Some(position) = field.move_position(self.position, x, y) {
+            self.position = position;
+        }
     }
 
 }
