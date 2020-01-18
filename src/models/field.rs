@@ -85,15 +85,21 @@ impl Field {
 
     pub fn move_position(&self, i: usize, shift_x: i32, shift_y: i32) -> Option<usize> {
         // TODO: Try to optimize and simplify
-        let s = self.size as i32;
-        let x = shift_x + (i as i32 % s);
-        let y = shift_y + (i as i32 / s);
+        let size = self.size as i32;
+        let (mut x, mut y) = self.to_position(i as i32);
+        x += shift_x;
+        y += shift_y;
 
-        if 0 <= x && x < s && 0 <= y && y < s {
-            return Option::Some((s * y + x) as usize);
+        if 0 <= x && x < size && 0 <= y && y < size {
+            return Option::Some((size * y + x) as usize);
         } else {
             return Option::None;
         }
+    }
+
+    pub fn to_position(&self, i: i32) -> (i32, i32) {
+        let size = self.size as i32;
+        return (i % size, i / size);
     }
 
 }

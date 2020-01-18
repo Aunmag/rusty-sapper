@@ -22,17 +22,13 @@ fn main() {
     let mut sapper = Sapper::new();
     let mut buffer = BufferedTerminal::new(new_terminal(Capabilities::new_from_env().unwrap()).unwrap()).unwrap();
     let mut render = true;
+    let mut update_cursor = true;
 
     buffer.terminal().set_raw_mode().unwrap();
 
     loop {
         if render { // TODO: Move to `field.render`
             buffer.add_change(Change::ClearScreen(ColorAttribute::Default));
-
-            let mut x = 0;
-            let mut y = 0;
-            let mut cursor_x = 0;
-            let mut cursor_y = 0;
 
             for (i, cell) in field.cells.iter().enumerate() {
                 let mut mark = cell.get_mark(&field, i);
@@ -41,28 +37,25 @@ fn main() {
                     mark = '#';
                 }
 
-                if i == sapper.position {
-                    cursor_x = x;
-                    cursor_y = y;
-                }
-
                 buffer.add_change(format!("{} ", mark));
-                x += 2;
 
                 if (i + 1) % field.size == 0 {
                     buffer.add_change("\r\n");
-                    x = 0;
-                    y += 1;
                 }
             }
+        }
+
+        if render || update_cursor {
+            let (cursor_x, cursor_y) = field.to_position(sapper.position as i32);
 
             buffer.add_change(Change::CursorPosition {
-                x: Position::Absolute(cursor_x),
-                y: Position::Absolute(cursor_y),
+                x: Position::Absolute(cursor_x as usize * 2),
+                y: Position::Absolute(cursor_y as usize),
             });
 
             buffer.flush().unwrap();
             render = false;
+            update_cursor = false;
         }
 
         match buffer.terminal().poll_input(None) {
@@ -71,19 +64,19 @@ fn main() {
                 match input {
                     InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
                         sapper._move(0, -1, &field);
-                        render = true;
+                        update_cursor = true;
                     }
                     InputEvent::Key(KeyEvent {key: KeyCode::DownArrow, ..}) => {
                         sapper._move(0, 1, &field);
-                        render = true;
+                        update_cursor = true;
                     }
                     InputEvent::Key(KeyEvent {key: KeyCode::LeftArrow, ..}) => {
                         sapper._move(-1, 0, &field);
-                        render = true;
+                        update_cursor = true;
                     }
                     InputEvent::Key(KeyEvent {key: KeyCode::RightArrow, ..}) => {
                         sapper._move(1, 0, &field);
-                        render = true;
+                        update_cursor = true;
                     }
                     InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
                         field.mark(sapper.position);
