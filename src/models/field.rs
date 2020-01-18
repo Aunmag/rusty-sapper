@@ -6,23 +6,38 @@ use crate::utils;
 pub struct Field {
     pub size: usize,
     pub cells: Vec<Cell>,
+    mines_density: f64,
+    has_mines: bool,
 }
 
 impl Field {
 
     pub fn new(size: usize, mines_density: f64) -> Field {
         let mut cells = Vec::new();
-        let mut is_first = true;
 
         for _ in 0..(size * size) {
-            cells.push(Cell::new(!is_first && utils::is_chance(mines_density)));
-            is_first = false;
+            cells.push(Cell::new(false));
         }
 
-        return Field {size, cells};
+        return Field {size, cells, mines_density, has_mines: false};
+    }
+
+    fn generate_mines(&mut self, excepting_position: usize) {
+        let excepting_positions = self.around(excepting_position);
+
+        for (i, cell) in &mut self.cells.iter_mut().enumerate() {
+            if utils::is_chance(self.mines_density) && !excepting_positions.contains(&i) {
+                cell.is_mined = true;
+            }
+        }
     }
 
     pub fn discover(&mut self, position: usize) {
+        if !self.has_mines {
+            self.generate_mines(position);
+            self.has_mines = true;
+        }
+
         let cell = &mut self.cells[position];
 
         cell.discover();

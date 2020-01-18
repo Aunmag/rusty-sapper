@@ -12,8 +12,6 @@ fn main() {
     let mut field = Field::new(FIELD_SIZE, MINES_DENSITY);
     let mut sapper = Sapper::new();
 
-    field.discover(sapper.position);
-
     loop {
         field.render(&sapper);
 
