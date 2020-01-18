@@ -1,6 +1,5 @@
 use crate::models::cell::Cell;
 use crate::models::cell::CellState;
-use crate::models::sapper::Sapper;
 use crate::utils;
 
 pub struct Field {
@@ -94,28 +93,6 @@ impl Field {
             return Option::Some((s * y + x) as usize);
         } else {
             return Option::None;
-        }
-    }
-
-    pub fn render(&self, sapper: &Sapper) {
-        for (i, cell) in self.cells.iter().enumerate() {
-            let mut mark;
-
-            if i == sapper.position {
-                mark = 'X';
-            } else {
-                mark = cell.get_mark(&self, i);
-            }
-
-            if cell.is_mined && (sapper.is_admin || !sapper.is_alive) {
-                mark = '#';
-            }
-
-            print!("{} ", mark);
-
-            if (i + 1) % self.size == 0 {
-                println!();
-            }
         }
     }
 
