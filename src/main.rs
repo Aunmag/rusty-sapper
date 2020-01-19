@@ -1,6 +1,7 @@
 mod models;
 mod utils;
 
+use crate::models::cell::CellState;
 use crate::models::field::Field;
 use crate::models::sapper::Sapper;
 use termwiz::caps::Capabilities;
@@ -79,11 +80,13 @@ fn main() {
                                     render = true;
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
-                                    if !field.discover(sapper.position) {
-                                        sapper.is_alive = false;
-                                    }
+                                    if field.cells[sapper.position].state != CellState::Marked {
+                                        if !field.discover(sapper.position) {
+                                            sapper.is_alive = false;
+                                        }
 
-                                    render = true;
+                                        render = true;
+                                    }
                                 }
                                 _ => {}
                             }
