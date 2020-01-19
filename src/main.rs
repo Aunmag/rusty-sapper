@@ -20,49 +20,35 @@ const MINES_DENSITY: f64 = 0.25;
 fn main() {
     let mut field = Field::new(FIELD_SIZE, MINES_DENSITY);
     let mut sapper = Sapper::new();
-    let mut buffer = BufferedTerminal::new(new_terminal(Capabilities::new_from_env().unwrap()).unwrap()).unwrap();
+    let mut terminal = BufferedTerminal::new(new_terminal(Capabilities::new_from_env().unwrap()).unwrap()).unwrap();
     let mut render = true;
     let mut update_cursor = true;
 
-    buffer.terminal().set_raw_mode().unwrap();
+    terminal.terminal().set_raw_mode().unwrap();
 
     loop {
-        if render { // TODO: Move to `field.render`
-            buffer.add_change(Change::ClearScreen(ColorAttribute::Default));
-
-            for (i, cell) in field.cells.iter().enumerate() {
-                let mut mark = cell.get_mark(&field, i);
-
-                if cell.is_mined && (sapper.is_admin || !sapper.is_alive) {
-                    mark = '#';
-                }
-
-                buffer.add_change(format!("{} ", mark));
-
-                if (i + 1) % field.size == 0 {
-                    buffer.add_change("\r\n");
-                }
-            }
+        if render {
+            terminal.draw_from_screen(&field.render(&sapper), 0, 0);
         }
 
         if render || update_cursor {
             if !sapper.is_alive {
-                buffer.add_change("Sorry, but you've taken the wrong step. Game over, press Esc to exit.");
+                terminal.add_change("\r\nSorry, but you've taken the wrong step. Game over, press Esc to exit.");
             }
 
             let (cursor_x, cursor_y) = field.to_position(sapper.position as i32);
 
-            buffer.add_change(Change::CursorPosition {
+            terminal.add_change(Change::CursorPosition {
                 x: Position::Absolute(cursor_x as usize * 2),
                 y: Position::Absolute(cursor_y as usize),
             });
 
-            buffer.flush().unwrap();
+            terminal.flush().unwrap();
             render = false;
             update_cursor = false;
         }
 
-        match buffer.terminal().poll_input(None) {
+        match terminal.terminal().poll_input(None) {
             Ok(None) => {},
             Ok(Some(input)) => {
                 match input {
@@ -112,6 +98,6 @@ fn main() {
         }
     }
 
-    buffer.add_change(Change::ClearScreen(ColorAttribute::Default));
-    buffer.flush().unwrap();
+    terminal.add_change(Change::ClearScreen(ColorAttribute::Default));
+    terminal.flush().unwrap();
 }

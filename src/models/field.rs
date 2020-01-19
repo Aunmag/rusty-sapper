@@ -1,6 +1,8 @@
 use crate::models::cell::Cell;
 use crate::models::cell::CellState;
+use crate::models::sapper::Sapper;
 use crate::utils;
+use termwiz::surface::Surface;
 
 pub struct Field {
     pub size: usize,
@@ -106,6 +108,26 @@ impl Field {
     pub fn to_position(&self, i: i32) -> (i32, i32) {
         let size = self.size as i32;
         return (i % size, i / size);
+    }
+
+    pub fn render(&self, sapper: &Sapper) -> Surface {
+        let mut surface = Surface::new(self.size * 2 + 1, self.size + 1);
+
+        for (i, cell) in self.cells.iter().enumerate() {
+            let mut mark = cell.get_mark(&self, i);
+
+            if cell.is_mined && (sapper.is_admin || !sapper.is_alive) {
+                mark = '#';
+            }
+
+            surface.add_change(format!("{} ", mark));
+
+            if (i + 1) % self.size == 0 {
+                surface.add_change("\r\n");
+            }
+        }
+
+        return surface;
     }
 
 }
