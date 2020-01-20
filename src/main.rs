@@ -37,6 +37,10 @@ fn main() {
                 terminal.add_change("\r\nSorry, but you've taken the wrong step. Game over, press Esc to exit.");
             }
 
+            if field.is_cleaned {
+                terminal.add_change("\r\nWell done! You've found the all mines! Press Esc to exit.");
+            }
+
             let (cursor_x, cursor_y) = field.to_position(sapper.position as i32);
 
             terminal.add_change(Change::CursorPosition {
@@ -57,7 +61,7 @@ fn main() {
                         break
                     }
                     _ => {
-                        if sapper.is_alive {
+                        if sapper.is_alive && !field.is_cleaned {
                             match input {
                                 InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
                                     sapper._move(0, -1, &field);
@@ -78,10 +82,13 @@ fn main() {
                                 InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
                                     field.mark(sapper.position);
                                     render = true;
+                                    field.update_is_cleaned();
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
                                     if field.cells[sapper.position].state != CellState::Marked {
-                                        if !field.discover(sapper.position) {
+                                        if field.discover(sapper.position) {
+                                            field.update_is_cleaned();
+                                        } else {
                                             sapper.is_alive = false;
                                         }
 

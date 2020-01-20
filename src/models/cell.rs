@@ -43,6 +43,14 @@ impl Cell {
         return mark;
     }
 
+    pub fn is_cleaned(&self) -> bool {
+        return match self.state {
+            CellState::Undiscovered => false,
+            CellState::Discovered => true,
+            CellState::Marked => self.is_mined,
+        }
+    }
+
 }
 
 #[derive(PartialEq)]

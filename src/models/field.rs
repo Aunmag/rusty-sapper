@@ -7,8 +7,9 @@ use termwiz::surface::Surface;
 pub struct Field {
     pub size: usize,
     pub cells: Vec<Cell>,
-    mines_density: f64,
-    has_mines: bool,
+    pub mines: usize,
+    pub mines_density: f64,
+    pub is_cleaned: bool,
 }
 
 impl Field {
@@ -20,7 +21,13 @@ impl Field {
             cells.push(Cell::new(false));
         }
 
-        return Field {size, cells, mines_density, has_mines: false};
+        return Field {
+            size,
+            cells,
+            mines: 0,
+            mines_density,
+            is_cleaned: false,
+        };
     }
 
     fn generate_mines(&mut self, excepting_position: usize) {
@@ -29,14 +36,14 @@ impl Field {
         for (i, cell) in &mut self.cells.iter_mut().enumerate() {
             if utils::is_chance(self.mines_density) && !excepting_positions.contains(&i) {
                 cell.is_mined = true;
+                self.mines += 1;
             }
         }
     }
 
     pub fn discover(&mut self, position: usize) -> bool {
-        if !self.has_mines {
+        if self.mines == 0 {
             self.generate_mines(position);
-            self.has_mines = true;
         }
 
         let cell = &mut self.cells[position];
@@ -128,6 +135,17 @@ impl Field {
         }
 
         return surface;
+    }
+
+    pub fn update_is_cleaned(&mut self) {
+        self.is_cleaned = true;
+
+        for cell in &self.cells {
+            if !cell.is_cleaned() {
+                self.is_cleaned = false;
+                break;
+            }
+        }
     }
 
 }
