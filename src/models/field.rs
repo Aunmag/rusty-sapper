@@ -53,7 +53,7 @@ impl Field {
         } else {
             cell.discover();
 
-            if cell.state == CellState::Discovered && self.count_mines(position) == 0 {
+            if cell.state == CellState::Discovered && self.count_mines_around(position) == 0 {
                 for i in self.around(position) {
                     if self.cells[i].state == CellState::Undiscovered {
                         self.discover(i);
@@ -65,11 +65,7 @@ impl Field {
         }
     }
 
-    pub fn mark(&mut self, position: usize) {
-        self.cells[position].mark();
-    }
-
-    pub fn count_mines(&self, position: usize) -> u32 {
+    pub fn count_mines_around(&self, position: usize) -> u32 {
         let mut mines = 0;
 
         for i in self.around(position) {

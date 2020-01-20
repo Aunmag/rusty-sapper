@@ -22,17 +22,17 @@ fn main() {
     let mut field = Field::new(FIELD_SIZE, MINES_DENSITY);
     let mut sapper = Sapper::new();
     let mut terminal = BufferedTerminal::new(new_terminal(Capabilities::new_from_env().unwrap()).unwrap()).unwrap();
-    let mut render = true;
+    let mut update_screen = true;
     let mut update_cursor = true;
 
     terminal.terminal().set_raw_mode().unwrap();
 
     loop {
-        if render {
+        if update_screen {
             terminal.draw_from_screen(&field.render(&sapper), 0, 0);
         }
 
-        if render || update_cursor {
+        if update_screen || update_cursor {
             if !sapper.is_alive {
                 terminal.add_change("\r\nSorry, but you've taken the wrong step. Game over, press Esc to exit.");
             }
@@ -49,7 +49,7 @@ fn main() {
             });
 
             terminal.flush().unwrap();
-            render = false;
+            update_screen = false;
             update_cursor = false;
         }
 
@@ -80,8 +80,8 @@ fn main() {
                                     update_cursor = true;
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
-                                    field.mark(sapper.position);
-                                    render = true;
+                                    field.cells[sapper.position].toggle_mark();
+                                    update_screen = true;
                                     field.update_is_cleaned();
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
@@ -92,7 +92,7 @@ fn main() {
                                             sapper.is_alive = false;
                                         }
 
-                                        render = true;
+                                        update_screen = true;
                                     }
                                 }
                                 _ => {}
