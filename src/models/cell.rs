@@ -29,15 +29,11 @@ impl Cell {
         }
     }
 
-    pub fn count_mines(&self, field: &Field, position: usize) -> u32 {
-        return field.count_mines(position);
-    }
-
     pub fn get_mark(&self, field: &Field, position: usize) -> char {
         let mut mark = match self.state {
             CellState::Marked => 'M',
             CellState::Undiscovered => '.',
-            CellState::Discovered => char::from_digit(self.count_mines(field, position), 10).unwrap_or('+'),
+            CellState::Discovered => char::from_digit(field.count_mines(position), 10).unwrap_or('+'),
         };
 
         if mark == '0' {
