@@ -1,5 +1,12 @@
 use crate::models::field::Field;
+use crate::models::sapper::Sapper;
 use std::char;
+use termwiz::color::AnsiColor;
+
+const MARK_UNDISCOVERED: char = '.';
+const MARK_DISCOVERED: char = ' ';
+const MARK_MARKED: char = '!';
+const MARK_MINED: char = '#';
 
 pub struct Cell {
     pub is_mined: bool,
@@ -29,18 +36,42 @@ impl Cell {
         }
     }
 
-    pub fn get_mark(&self, field: &Field, position: usize) -> char {
-        let mut mark = match self.state {
-            CellState::Marked => 'M',
-            CellState::Undiscovered => '.',
-            CellState::Discovered => char::from_digit(field.count_mines_around(position), 10).unwrap_or('+'),
-        };
+    pub fn get_mark(&self, field: &Field, position: usize, sapper: &Sapper) -> char {
+        let mut mark;
 
-        if mark == '0' {
-            mark = ' ';
+        if self.is_mined && (sapper.is_admin || !sapper.is_alive) {
+            mark = MARK_MINED;
+        } else {
+            mark = match self.state {
+                CellState::Undiscovered => MARK_UNDISCOVERED,
+                CellState::Discovered => char::from_digit(field.count_mines_around(position), 10).unwrap_or('9'),
+                CellState::Marked => MARK_MARKED,
+            };
+
+            if mark == '0' {
+                mark = MARK_DISCOVERED;
+            }
         }
 
         return mark;
+    }
+
+    pub fn get_color(mark: char) -> AnsiColor {
+        return match mark {
+            '1' => AnsiColor::Blue,
+            '2' => AnsiColor::Green,
+            '3' => AnsiColor::Red,
+            '4' => AnsiColor::Navy,
+            '5' => AnsiColor::Maroon,
+            '6' => AnsiColor::Aqua,
+            '7' | '8' | '9' => AnsiColor::Purple,
+            MARK_MARKED | MARK_MINED => AnsiColor::Red,
+            _ => AnsiColor::Silver,
+        };
+    }
+
+    pub fn is_reversed(mark: char) -> bool {
+        return mark == MARK_MARKED || mark == MARK_MINED;
     }
 
     pub fn is_cleaned(&self) -> bool {
