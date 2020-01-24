@@ -15,7 +15,7 @@ use termwiz::terminal::buffered::BufferedTerminal;
 use termwiz::terminal::new_terminal;
 use termwiz::terminal::Terminal;
 
-const FIELD_SIZE: usize = 30;
+const FIELD_SIZE: usize = 24;
 const MINES_DENSITY: f64 = 0.2;
 
 fn main() {
