@@ -16,7 +16,7 @@ use termwiz::terminal::new_terminal;
 use termwiz::terminal::Terminal;
 
 const FIELD_SIZE: usize = 30;
-const MINES_DENSITY: f64 = 0.25;
+const MINES_DENSITY: f64 = 0.2;
 
 fn main() {
     let mut field = Field::new(FIELD_SIZE, MINES_DENSITY);
