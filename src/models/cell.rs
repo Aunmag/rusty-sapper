@@ -2,6 +2,7 @@ use crate::models::field::Field;
 use crate::models::sapper::Sapper;
 use std::char;
 use termwiz::color::AnsiColor;
+use termwiz::color::ColorAttribute;
 
 const MARK_UNDISCOVERED: char = '.';
 const MARK_DISCOVERED: char = ' ';
@@ -56,22 +57,24 @@ impl Cell {
         return mark;
     }
 
-    pub fn get_color(mark: char) -> AnsiColor {
+    pub fn get_color(mark: char) -> ColorAttribute {
         return match mark {
-            '1' => AnsiColor::Blue,
-            '2' => AnsiColor::Green,
-            '3' => AnsiColor::Red,
-            '4' => AnsiColor::Navy,
-            '5' => AnsiColor::Maroon,
-            '6' => AnsiColor::Aqua,
-            '7' | '8' | '9' => AnsiColor::Purple,
-            MARK_MARKED | MARK_MINED => AnsiColor::Red,
-            _ => AnsiColor::Silver,
+            '1' => AnsiColor::Blue.into(),
+            '2' => AnsiColor::Green.into(),
+            '3' => AnsiColor::Red.into(),
+            '4' => AnsiColor::Navy.into(),
+            '5' => AnsiColor::Maroon.into(),
+            '6' => AnsiColor::Aqua.into(),
+            '7' | '8' | '9' => AnsiColor::Purple.into(),
+            _ => ColorAttribute::Default,
         };
     }
 
-    pub fn is_reversed(mark: char) -> bool {
-        return mark == MARK_MARKED || mark == MARK_MINED;
+    pub fn get_color_background(mark: char) -> ColorAttribute {
+        return match mark {
+            MARK_MARKED | MARK_MINED => AnsiColor::Maroon.into(),
+            _ => ColorAttribute::Default,
+        };
     }
 
     pub fn is_cleaned(&self) -> bool {

@@ -3,7 +3,7 @@ use crate::models::cell::CellState;
 use crate::models::sapper::Sapper;
 use crate::utils;
 use termwiz::cell::AttributeChange;
-use termwiz::color::AnsiColor;
+use termwiz::color::ColorAttribute;
 use termwiz::surface::Change;
 use termwiz::surface::Surface;
 
@@ -117,23 +117,22 @@ impl Field {
     }
 
     pub fn render(&self, sapper: &Sapper) -> Surface {
-        let mut surface = Surface::new(self.size * 2 + 1, self.size + 1);
+        let mut surface = Surface::new(self.size * 2 - 1, self.size);
 
         for (i, cell) in self.cells.iter().enumerate() {
             let mark = cell.get_mark(&self, i, &sapper);
 
-            surface.add_change(Change::Attribute(AttributeChange::Foreground(Cell::get_color(mark).into())));
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(Cell::is_reversed(mark))));
+            surface.add_change(Change::Attribute(AttributeChange::Foreground(Cell::get_color(mark))));
+            surface.add_change(Change::Attribute(AttributeChange::Background(Cell::get_color_background(mark))));
+            surface.add_change(Change::Attribute(AttributeChange::Reverse(i == sapper.position)));
             surface.add_change(format!("{}", mark));
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
-            surface.add_change(" ");
 
-            if (i + 1) % self.size == 0 {
-                surface.add_change("\r\n");
+            if (i + 1) % self.size != 0 {
+                surface.add_change(Change::Attribute(AttributeChange::Background(ColorAttribute::Default)));
+                surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
+                surface.add_change(" ");
             }
         }
-
-        surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Silver.into())));
 
         return surface;
     }

@@ -10,6 +10,7 @@ use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
 use termwiz::surface::Change;
+use termwiz::surface::CursorShape;
 use termwiz::surface::Position;
 use termwiz::terminal::buffered::BufferedTerminal;
 use termwiz::terminal::new_terminal;
@@ -23,16 +24,19 @@ fn main() {
     let mut sapper = Sapper::new();
     let mut terminal = BufferedTerminal::new(new_terminal(Capabilities::new_from_env().unwrap()).unwrap()).unwrap();
     let mut update_screen = true;
-    let mut update_cursor = true;
 
     terminal.terminal().set_raw_mode().unwrap();
+    terminal.add_change(Change::CursorShape(CursorShape::Hidden));
 
     loop {
         if update_screen {
             terminal.draw_from_screen(&field.render(&sapper), 0, 0);
-        }
 
-        if update_screen || update_cursor {
+            terminal.add_change(Change::CursorPosition {
+                x: Position::Absolute(0),
+                y: Position::Absolute(field.size + 1),
+            });
+
             if !sapper.is_alive {
                 terminal.add_change("\r\nSorry, but you've taken the wrong step. Game over, press Esc to exit.");
             }
@@ -41,16 +45,8 @@ fn main() {
                 terminal.add_change("\r\nWell done! You've found the all mines! Press Esc to exit.");
             }
 
-            let (cursor_x, cursor_y) = field.to_position(sapper.position as i32);
-
-            terminal.add_change(Change::CursorPosition {
-                x: Position::Absolute(cursor_x as usize * 2),
-                y: Position::Absolute(cursor_y as usize),
-            });
-
             terminal.flush().unwrap();
             update_screen = false;
-            update_cursor = false;
         }
 
         match terminal.terminal().poll_input(None) {
@@ -65,19 +61,19 @@ fn main() {
                             match input {
                                 InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
                                     sapper._move(0, -1, &field);
-                                    update_cursor = true;
+                                    update_screen = true;
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::DownArrow, ..}) => {
                                     sapper._move(0, 1, &field);
-                                    update_cursor = true;
+                                    update_screen = true;
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::LeftArrow, ..}) => {
                                     sapper._move(-1, 0, &field);
-                                    update_cursor = true;
+                                    update_screen = true;
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::RightArrow, ..}) => {
                                     sapper._move(1, 0, &field);
-                                    update_cursor = true;
+                                    update_screen = true;
                                 }
                                 InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
                                     field.cells[sapper.position].toggle_mark();
