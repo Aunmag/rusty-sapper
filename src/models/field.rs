@@ -7,9 +7,11 @@ use termwiz::color::AnsiColor;
 use termwiz::surface::Change;
 use termwiz::surface::Surface;
 
+const SHIFTS: [i32; 3] = [-1, 0, 1];
+
 pub struct Field {
     pub size: usize,
-    pub cells: Vec<Cell>,
+    pub cells: Vec<Cell>, // TODO: Find a way to use fixed-size array
     pub mines: usize,
     pub mines_density: f64,
     pub is_cleaned: bool,
@@ -82,12 +84,10 @@ impl Field {
 
     pub fn around(&self, center: usize) -> Vec<usize> {
         // TODO: Find a way to a call lambda while iteration instead of returning an array
-
-        let a: Vec<i32> = vec![-1, 0, 1]; // TODO: To constant
         let mut positions = Vec::new();
 
-        for y in &a {
-            for x in &a {
+        for y in &SHIFTS {
+            for x in &SHIFTS {
                 if let Option::Some(moved) = self.move_position(center, *x, *y) {
                     positions.push(moved);
                 }
