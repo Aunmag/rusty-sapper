@@ -12,9 +12,9 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Self {
+    pub fn new(field_size: usize, mines_density: f64) -> Self {
         return Game {
-            field: Field::new(),
+            field: Field::new(field_size, mines_density),
             sapper: Sapper::new(),
         }
     }

@@ -1,6 +1,8 @@
 use crate::models::game::Game;
 use crate::models::ui::button::Button;
 use crate::models::ui::element::ElementEvent;
+use crate::models::ui::input_number::InputNumber;
+use crate::models::ui::spacer::Spacer;
 use crate::models::ui::menu::Menu;
 use crate::models::ui::page::Page;
 use termwiz::caps::Capabilities;
@@ -18,7 +20,14 @@ use termwiz::terminal::Terminal;
 const MAIN: &'static str = "Main menu";
 const CONTINUE: &'static str = "Continue";
 const NEW_GAME: &'static str = "New game";
+const START: &'static str = "Start";
+const BACK: &'static str = "Back";
 const QUIT: &'static str = "Quit";
+const FIELD_SIZE: &'static str = "Field size   ";
+const MINES_DENSITY: &'static str = "Mines density";
+
+const DEFAULT_FILED_SIZE: usize = 24;
+const DEFAULT_MINES_DENSITY: f64 = 0.2;
 
 #[derive(PartialEq)]
 pub enum ScreenUpdate {
@@ -55,6 +64,15 @@ impl Application {
         page_main.elements.push(Box::new(Button::new(QUIT, true)));
         page_main.reset_cursor();
         menu.add(page_main);
+
+        let mut new_game = Page::new(NEW_GAME);
+        new_game.elements.push(Box::new(InputNumber::new(FIELD_SIZE, DEFAULT_FILED_SIZE as f64, 8.0, 32.0, 1.0)));
+        new_game.elements.push(Box::new(InputNumber::new(MINES_DENSITY, DEFAULT_MINES_DENSITY, 0.0, 1.0, 0.01)));
+        new_game.elements.push(Box::new(Spacer::new()));
+        new_game.elements.push(Box::new(Button::new(START, true)));
+        new_game.elements.push(Box::new(Button::new(BACK, true)));
+        new_game.reset_cursor();
+        menu.add(new_game);
 
         return menu;
     }
@@ -116,16 +134,22 @@ impl Application {
                                             self.toggle_menu();
                                         }
                                         ElementEvent::ButtonPressed(NEW_GAME) => {
+                                            self.menu.open(NEW_GAME);
+                                        }
+                                        ElementEvent::ButtonPressed(START) => {
                                             self.start_new_game();
+                                        }
+                                        ElementEvent::ButtonPressed(BACK) => {
+                                            self.menu.back();
                                         }
                                         ElementEvent::ButtonPressed(QUIT) => {
                                             self.stop();
                                         }
                                         ElementEvent::PageChanged => {
-                                            self.screen_update = ScreenUpdate::Partial;
+                                            self.set_screen_update(ScreenUpdate::Partial);
                                         }
                                         ElementEvent::MenuChanged => {
-                                            self.screen_update = ScreenUpdate::Full;
+                                            self.set_screen_update(ScreenUpdate::Full);
                                         }
                                         _ => {}
                                     }
@@ -135,7 +159,7 @@ impl Application {
                             }
                         } else {
                             if self.game.as_mut().unwrap().update(&input) {
-                                self.screen_update = ScreenUpdate::Partial;
+                                self.set_screen_update(ScreenUpdate::Partial);
                             }
                         }
                     }
@@ -152,13 +176,26 @@ impl Application {
     }
 
     fn start_new_game(&mut self) {
+        let mut field_size = DEFAULT_FILED_SIZE;
+        let mut mines_density = DEFAULT_MINES_DENSITY;
+
+        if let Some(page) = self.menu.fetch_page_mut(NEW_GAME) {
+            if let Some(v) = page.fetch_input_number_mut(FIELD_SIZE) {
+                field_size = v.value as usize;
+            }
+
+            if let Some(v) = page.fetch_input_number_mut(MINES_DENSITY) {
+                mines_density = v.value;
+            }
+        }
+
         if let Some(page) = self.menu.fetch_page_mut(MAIN) {
             if let Some(button) = page.fetch_button_mut(CONTINUE) {
                 button.is_active = true;
             }
         }
 
-        self.game = Some(Game::new());
+        self.game = Some(Game::new(field_size, mines_density));
         self.menu.back();
         self.toggle_menu();
     }
@@ -173,11 +210,17 @@ impl Application {
                 }
             }
 
-            self.screen_update = ScreenUpdate::Full;
+            self.set_screen_update(ScreenUpdate::Full);
         }
     }
 
     fn stop(&mut self) {
         self.is_running = false;
+    }
+
+    fn set_screen_update(&mut self, screen_update: ScreenUpdate) {
+        if self.screen_update != ScreenUpdate::Full {
+            self.screen_update = screen_update;
+        }
     }
 }

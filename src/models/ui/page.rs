@@ -1,6 +1,7 @@
 use crate::models::ui::button::Button;
 use crate::models::ui::element::Element;
 use crate::models::ui::element::ElementEvent;
+use crate::models::ui::input_number::InputNumber;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
@@ -112,6 +113,12 @@ impl Page {
         return None;
     }
 
+    // TODO: Fix WET code
+    pub fn fetch_input_number_mut(&mut self, label: &str) -> Option<&mut InputNumber> {
+        return self.fetch_element_mut(label).and_then(|e| e.as_any().downcast_mut::<InputNumber>());
+    }
+
+    // TODO: Fix WET code
     pub fn fetch_button_mut(&mut self, label: &str) -> Option<&mut Button> {
         return self.fetch_element_mut(label).and_then(|e| e.as_any().downcast_mut::<Button>());
     }

@@ -7,8 +7,6 @@ use termwiz::color::ColorAttribute;
 use termwiz::surface::Change;
 use termwiz::surface::Surface;
 
-const SIZE: usize = 24;
-const MINES_DENSITY: f64 = 0.2;
 const SHIFTS: [i32; 3] = [-1, 0, 1];
 
 pub struct Field {
@@ -20,18 +18,18 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new() -> Self {
+    pub fn new(size: usize, mines_density: f64) -> Self {
         let mut cells = Vec::new();
 
-        for _ in 0..(SIZE * SIZE) {
+        for _ in 0..(size * size) {
             cells.push(Cell::new(false));
         }
 
         return Field {
-            size: SIZE,
+            size,
             cells,
             mines: 0,
-            mines_density: MINES_DENSITY,
+            mines_density: mines_density,
             is_cleaned: false,
         };
     }

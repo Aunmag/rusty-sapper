@@ -43,6 +43,19 @@ impl Menu {
         self.pages.push(page);
     }
 
+    pub fn open(&mut self, label: &str) {
+        for (i, page) in self.pages.iter().enumerate() {
+            if std::ptr::eq(page.label, label) {
+                if i != *self.pages_history.last().unwrap_or(&0) {
+                    self.pages_history.push(i);
+                    self.events.push(ElementEvent::MenuChanged);
+                }
+
+                break;
+            }
+        }
+    }
+
     pub fn back(&mut self) {
         if !self.pages_history.is_empty() {
             if let Some(current) = self.get_page_current() {
