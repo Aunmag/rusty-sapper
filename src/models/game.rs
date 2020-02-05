@@ -71,11 +71,11 @@ impl Game {
             surface.resize(size_x, size_y + 8);
 
             if !self.sapper.is_alive {
-                surface.add_change("\r\n\r\nSorry, but you've taken the wrong step. Game over, press Esc to exit.");
+                surface.add_change("\r\n\r\nSorry, but you've taken the wrong step. Game over, press Esc to go back to the main menu.");
             }
 
             if self.field.is_cleaned {
-                surface.add_change("\r\n\r\nWell done! You've found the all mines! Press Esc to exit.");
+                surface.add_change("\r\n\r\nWell done! You've found the all mines! Press Esc to go back to the main menu.");
             }
         }
 
