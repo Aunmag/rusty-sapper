@@ -7,8 +7,7 @@ pub struct Sapper {
 }
 
 impl Sapper {
-
-    pub fn new() -> Sapper {
+    pub fn new() -> Self {
         return Sapper {
             position: 0,
             is_alive: true,
@@ -17,9 +16,8 @@ impl Sapper {
     }
 
     pub fn _move(&mut self, x: i32, y: i32, field: &Field) {
-        if let Option::Some(position) = field.move_position(self.position, x, y) {
+        if let Some(position) = field.move_position(self.position, x, y) {
             self.position = position;
         }
     }
-
 }

@@ -15,8 +15,7 @@ pub struct Cell {
 }
 
 impl Cell {
-
-    pub fn new(is_mined: bool) -> Cell {
+    pub fn new(is_mined: bool) -> Self {
         return Cell {
             is_mined,
             state: CellState::Undiscovered,
@@ -84,7 +83,6 @@ impl Cell {
             CellState::Marked => self.is_mined,
         }
     }
-
 }
 
 #[derive(PartialEq)]

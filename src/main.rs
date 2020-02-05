@@ -50,7 +50,7 @@ fn main() {
         }
 
         match terminal.terminal().poll_input(None) {
-            Ok(None) => {},
+            Ok(None) => {}
             Ok(Some(input)) => {
                 match input {
                     InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..}) => {
@@ -94,7 +94,7 @@ fn main() {
                                 _ => {}
                             }
                         }
-                    },
+                    }
                 }
             }
             Err(error) => {

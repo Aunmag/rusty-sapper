@@ -18,8 +18,7 @@ pub struct Field {
 }
 
 impl Field {
-
-    pub fn new(size: usize, mines_density: f64) -> Field {
+    pub fn new(size: usize, mines_density: f64) -> Self {
         let mut cells = Vec::new();
 
         for _ in 0..(size * size) {
@@ -88,7 +87,7 @@ impl Field {
 
         for y in &SHIFTS {
             for x in &SHIFTS {
-                if let Option::Some(moved) = self.move_position(center, *x, *y) {
+                if let Some(moved) = self.move_position(center, *x, *y) {
                     positions.push(moved);
                 }
             }
@@ -105,9 +104,9 @@ impl Field {
         y += shift_y;
 
         if 0 <= x && x < size && 0 <= y && y < size {
-            return Option::Some((size * y + x) as usize);
+            return Some((size * y + x) as usize);
         } else {
-            return Option::None;
+            return None;
         }
     }
 
@@ -147,5 +146,4 @@ impl Field {
             }
         }
     }
-
 }
