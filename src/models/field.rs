@@ -36,10 +36,14 @@ impl Field {
     fn generate_mines(&mut self, excepting_position: usize) {
         let excepting_positions = self.around(excepting_position);
 
-        for (i, cell) in &mut self.cells.iter_mut().enumerate() {
+        for i in 0..(self.size * self.size) {
             if utils::is_chance(self.mines_density) && !excepting_positions.contains(&i) {
-                cell.is_mined = true;
+                self.cells[i].is_mined = true;
                 self.mines += 1;
+
+                for i_near in self.around(i) {
+                    self.cells[i_near].mines_around += 1;
+                }
             }
         }
     }
@@ -56,7 +60,7 @@ impl Field {
         } else {
             cell.is_discovered = true;
 
-            if self.count_mines_around(position) == 0 {
+            if cell.mines_around == 0 {
                 for i in self.around(position) {
                     if !self.cells[i].is_discovered {
                         self.discover(i);
@@ -66,18 +70,6 @@ impl Field {
 
             return true;
         }
-    }
-
-    pub fn count_mines_around(&self, position: usize) -> u32 {
-        let mut mines = 0;
-
-        for i in self.around(position) {
-            if self.cells[i].is_mined {
-                mines += 1;
-            }
-        }
-
-        return mines;
     }
 
     pub fn around(&self, center: usize) -> Vec<usize> {
@@ -118,7 +110,7 @@ impl Field {
         let mut surface = Surface::new(self.size * 2 - 1, self.size);
 
         for (i, cell) in self.cells.iter().enumerate() {
-            let mark = cell.get_mark(&self, i, &sapper);
+            let mark = cell.get_mark(i, &sapper);
 
             surface.add_change(Change::Attribute(AttributeChange::Foreground(Cell::get_color(mark))));
             surface.add_change(Change::Attribute(AttributeChange::Background(Cell::get_color_background(mark))));

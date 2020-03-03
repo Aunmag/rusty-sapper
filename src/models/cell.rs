@@ -1,4 +1,3 @@
-use crate::models::field::Field;
 use crate::models::sapper::Sapper;
 use std::char;
 use termwiz::color::AnsiColor;
@@ -12,6 +11,7 @@ const MARK_MINED: char = '#';
 pub struct Cell {
     pub is_mined: bool,
     pub is_discovered: bool,
+    pub mines_around: usize,
 }
 
 impl Cell {
@@ -19,22 +19,21 @@ impl Cell {
         return Cell {
             is_mined,
             is_discovered: false,
+            mines_around: 0,
         };
     }
 
-    pub fn get_mark(&self, field: &Field, position: usize, sapper: &Sapper) -> char {
+    pub fn get_mark(&self, position: usize, sapper: &Sapper) -> char {
         let mark;
 
         if self.is_mined && !sapper.is_alive {
             mark = MARK_MINED;
         } else {
             if self.is_discovered {
-                let mines = field.count_mines_around(position);
-
-                if mines == 0 {
+                if self.mines_around == 0 {
                     mark = MARK_DISCOVERED;
                 } else {
-                    mark = char::from_digit(mines, 10).unwrap_or('9');
+                    mark = char::from_digit(self.mines_around as u32, 10).unwrap_or('9');
                 }
             } else {
                 if sapper.has_marked(position) {
