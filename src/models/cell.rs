@@ -11,45 +11,37 @@ const MARK_MINED: char = '#';
 
 pub struct Cell {
     pub is_mined: bool,
-    pub state: CellState,
+    pub is_discovered: bool,
 }
 
 impl Cell {
     pub fn new(is_mined: bool) -> Self {
         return Cell {
             is_mined,
-            state: CellState::Undiscovered,
+            is_discovered: false,
         };
     }
 
-    pub fn toggle_mark(&mut self) {
-        match self.state {
-            CellState::Undiscovered => self.state = CellState::Marked,
-            CellState::Marked => self.state = CellState::Undiscovered,
-            _ => {},
-        }
-    }
-
-    pub fn discover(&mut self) {
-        if self.state == CellState::Undiscovered {
-            self.state = CellState::Discovered;
-        }
-    }
-
     pub fn get_mark(&self, field: &Field, position: usize, sapper: &Sapper) -> char {
-        let mut mark;
+        let mark;
 
         if self.is_mined && !sapper.is_alive {
             mark = MARK_MINED;
         } else {
-            mark = match self.state {
-                CellState::Undiscovered => MARK_UNDISCOVERED,
-                CellState::Discovered => char::from_digit(field.count_mines_around(position), 10).unwrap_or('9'),
-                CellState::Marked => MARK_MARKED,
-            };
+            if self.is_discovered {
+                let mines = field.count_mines_around(position);
 
-            if mark == '0' {
-                mark = MARK_DISCOVERED;
+                if mines == 0 {
+                    mark = MARK_DISCOVERED;
+                } else {
+                    mark = char::from_digit(mines, 10).unwrap_or('9');
+                }
+            } else {
+                if sapper.has_marked(position) {
+                    mark = MARK_MARKED;
+                } else {
+                    mark = MARK_UNDISCOVERED;
+                }
             }
         }
 
@@ -77,17 +69,6 @@ impl Cell {
     }
 
     pub fn is_cleaned(&self) -> bool {
-        return match self.state {
-            CellState::Undiscovered => false,
-            CellState::Discovered => true,
-            CellState::Marked => self.is_mined,
-        }
+        return self.is_mined || self.is_discovered;
     }
-}
-
-#[derive(PartialEq)]
-pub enum CellState {
-    Undiscovered,
-    Discovered,
-    Marked,
 }

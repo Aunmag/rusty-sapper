@@ -1,8 +1,10 @@
 use crate::models::field::Field;
+use std::collections::HashSet;
 
 pub struct Sapper {
     pub position: usize,
     pub is_alive: bool,
+    marks: HashSet<usize>,
 }
 
 impl Sapper {
@@ -10,6 +12,7 @@ impl Sapper {
         return Sapper {
             position: 0,
             is_alive: true,
+            marks: HashSet::new(),
         };
     }
 
@@ -17,5 +20,17 @@ impl Sapper {
         if let Some(position) = field.move_position(self.position, x, y) {
             self.position = position;
         }
+    }
+
+    pub fn toggle_mark(&mut self) {
+        if self.has_marked(self.position) {
+            self.marks.remove(&self.position);
+        } else {
+            self.marks.insert(self.position);
+        }
+    }
+
+    pub fn has_marked(&self, position: usize) -> bool {
+        return self.marks.contains(&position);
     }
 }

@@ -1,5 +1,4 @@
 use crate::models::cell::Cell;
-use crate::models::cell::CellState;
 use crate::models::sapper::Sapper;
 use crate::utils;
 use termwiz::cell::AttributeChange;
@@ -55,11 +54,11 @@ impl Field {
         if cell.is_mined {
             return false;
         } else {
-            cell.discover();
+            cell.is_discovered = true;
 
-            if cell.state == CellState::Discovered && self.count_mines_around(position) == 0 {
+            if self.count_mines_around(position) == 0 {
                 for i in self.around(position) {
-                    if self.cells[i].state == CellState::Undiscovered {
+                    if !self.cells[i].is_discovered {
                         self.discover(i);
                     }
                 }

@@ -1,4 +1,3 @@
-use crate::models::cell::CellState;
 use crate::models::field::Field;
 use crate::models::sapper::Sapper;
 use termwiz::input::InputEvent;
@@ -41,12 +40,11 @@ impl Game {
                     update_screen = true;
                 }
                 InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
-                    self.field.cells[self.sapper.position].toggle_mark();
-                    self.field.update_is_cleaned();
+                    self.sapper.toggle_mark();
                     update_screen = true;
                 }
                 InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
-                    if self.field.cells[self.sapper.position].state != CellState::Marked {
+                    if !self.sapper.has_marked(self.sapper.position) {
                         if self.field.discover(self.sapper.position) {
                             self.field.update_is_cleaned();
                         } else {
