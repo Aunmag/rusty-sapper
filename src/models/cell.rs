@@ -39,7 +39,7 @@ impl Cell {
     pub fn get_mark(&self, field: &Field, position: usize, sapper: &Sapper) -> char {
         let mut mark;
 
-        if self.is_mined && (sapper.is_admin || !sapper.is_alive) {
+        if self.is_mined && !sapper.is_alive {
             mark = MARK_MINED;
         } else {
             mark = match self.state {

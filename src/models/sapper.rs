@@ -3,7 +3,6 @@ use crate::models::field::Field;
 pub struct Sapper {
     pub position: usize,
     pub is_alive: bool,
-    pub is_admin: bool,
 }
 
 impl Sapper {
@@ -11,7 +10,6 @@ impl Sapper {
         return Sapper {
             position: 0,
             is_alive: true,
-            is_admin: false,
         };
     }
 
