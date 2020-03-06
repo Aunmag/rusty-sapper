@@ -21,7 +21,7 @@ impl Game {
     pub fn update(&mut self, input: &InputEvent) -> bool {
         let mut update_screen = false;
 
-        if self.sapper.is_alive && !self.field.is_cleaned {
+        if self.sapper.is_alive && !self.field.is_cleaned() {
             match input {
                 InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
                     self.sapper._move(0, -1, &self.field);
@@ -45,9 +45,7 @@ impl Game {
                 }
                 InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
                     if !self.sapper.has_marked(self.sapper.position) {
-                        if self.field.discover(self.sapper.position) {
-                            self.field.update_is_cleaned();
-                        } else {
+                        if !self.field.discover(self.sapper.position) {
                             self.sapper.is_alive = false;
                         }
 
@@ -65,14 +63,14 @@ impl Game {
         let mut surface = self.field.render(&self.sapper);
         let (size_x, size_y) = surface.dimensions();
 
-        if self.field.is_cleaned || !self.sapper.is_alive {
+        if self.field.is_cleaned() || !self.sapper.is_alive {
             surface.resize(size_x, size_y + 8);
 
             if !self.sapper.is_alive {
                 surface.add_change("\r\n\r\nSorry, but you've taken the wrong step. Game over, press Esc to go back to the main menu.");
             }
 
-            if self.field.is_cleaned {
+            if self.field.is_cleaned() {
                 surface.add_change("\r\n\r\nWell done! You've found the all mines! Press Esc to go back to the main menu.");
             }
         }

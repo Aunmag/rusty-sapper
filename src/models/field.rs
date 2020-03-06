@@ -9,11 +9,11 @@ use termwiz::surface::Surface;
 const SHIFTS: [i32; 3] = [-1, 0, 1];
 
 pub struct Field {
-    pub size: usize,
-    pub cells: Vec<Cell>, // TODO: Find a way to use fixed-size array
-    pub mines: usize,
-    pub mines_density: f64,
-    pub is_cleaned: bool,
+    size: usize,
+    cells: Vec<Cell>,
+    mines_density: f64,
+    mines_count: usize,
+    cells_discovered_count: usize,
 }
 
 impl Field {
@@ -27,9 +27,9 @@ impl Field {
         return Field {
             size,
             cells,
-            mines: 0,
             mines_density: mines_density,
-            is_cleaned: false,
+            mines_count: 0,
+            cells_discovered_count: 0,
         };
     }
 
@@ -39,7 +39,7 @@ impl Field {
         for i in 0..(self.size * self.size) {
             if utils::is_chance(self.mines_density) && !excepting_positions.contains(&i) {
                 self.cells[i].is_mined = true;
-                self.mines += 1;
+                self.mines_count += 1;
 
                 for i_near in self.around(i) {
                     self.cells[i_near].mines_around += 1;
@@ -49,7 +49,7 @@ impl Field {
     }
 
     pub fn discover(&mut self, position: usize) -> bool {
-        if self.mines == 0 {
+        if self.mines_count == 0 {
             self.generate_mines(position);
         }
 
@@ -58,11 +58,12 @@ impl Field {
         if cell.is_mined {
             return false;
         } else {
-            cell.is_discovered = true;
+            if !cell.is_discovered {
+                cell.is_discovered = true;
+                self.cells_discovered_count += 1;
 
-            if cell.mines_around == 0 {
-                for i in self.around(position) {
-                    if !self.cells[i].is_discovered {
+                if cell.mines_around == 0 {
+                    for i in self.around(position) {
                         self.discover(i);
                     }
                 }
@@ -127,14 +128,15 @@ impl Field {
         return surface;
     }
 
-    pub fn update_is_cleaned(&mut self) {
-        self.is_cleaned = true;
+    pub fn is_cleaned(&self) -> bool {
+        return self.get_cells_undiscovered_count() == 0;
+    }
 
-        for cell in &self.cells {
-            if !cell.is_cleaned() {
-                self.is_cleaned = false;
-                break;
-            }
-        }
+    pub fn get_cells_count(&self) -> usize {
+        return self.cells.len();
+    }
+
+    pub fn get_cells_undiscovered_count(&self) -> usize {
+        return self.get_cells_count() - self.mines_count - self.cells_discovered_count;
     }
 }

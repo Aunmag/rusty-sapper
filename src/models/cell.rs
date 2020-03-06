@@ -66,8 +66,4 @@ impl Cell {
             _ => ColorAttribute::Default,
         };
     }
-
-    pub fn is_cleaned(&self) -> bool {
-        return self.is_mined || self.is_discovered;
-    }
 }
