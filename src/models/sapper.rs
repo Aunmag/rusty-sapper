@@ -5,6 +5,7 @@ pub struct Sapper {
     pub position: usize,
     pub is_alive: bool,
     marks: HashSet<usize>,
+    score: u16,
 }
 
 impl Sapper {
@@ -13,6 +14,7 @@ impl Sapper {
             position: 0,
             is_alive: true,
             marks: HashSet::new(),
+            score: 0,
         };
     }
 
@@ -20,6 +22,10 @@ impl Sapper {
         if let Some(position) = field.move_position(self.position, x, y) {
             self.position = position;
         }
+    }
+
+    pub fn increase_score(&mut self) {
+        self.score += 1;
     }
 
     pub fn toggle_mark(&mut self) {
@@ -32,5 +38,13 @@ impl Sapper {
 
     pub fn has_marked(&self, position: usize) -> bool {
         return self.marks.contains(&position);
+    }
+
+    pub fn get_marks_count(&self) -> usize {
+        return self.marks.len();
+    }
+
+    pub fn get_score(&self) -> u16 {
+        return self.score;
     }
 }

@@ -132,8 +132,20 @@ impl Field {
         return self.get_cells_undiscovered_count() == 0;
     }
 
+    pub fn get_size(&self) -> usize {
+        return self.size;
+    }
+
+    pub fn get_mines_count(&self) -> usize {
+        return self.mines_count;
+    }
+
     pub fn get_cells_count(&self) -> usize {
         return self.cells.len();
+    }
+
+    pub fn get_cells_discovered_count(&self) -> usize {
+        return self.cells_discovered_count;
     }
 
     pub fn get_cells_undiscovered_count(&self) -> usize {
