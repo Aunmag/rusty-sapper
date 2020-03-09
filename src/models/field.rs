@@ -18,7 +18,7 @@ pub struct Field {
 
 impl Field {
     pub fn new(size: usize, mines_density: f64) -> Self {
-        let mut cells = Vec::new();
+        let mut cells = Vec::with_capacity(size * size);
 
         for _ in 0..(size * size) {
             cells.push(Cell::new(false));
@@ -34,14 +34,14 @@ impl Field {
     }
 
     fn generate_mines(&mut self, excepting_position: usize) {
-        let excepting_positions = self.around(excepting_position);
+        let excepting_positions = self.around(excepting_position, true);
 
         for i in 0..(self.size * self.size) {
             if utils::is_chance(self.mines_density) && !excepting_positions.contains(&i) {
                 self.cells[i].is_mined = true;
                 self.mines_count += 1;
 
-                for i_near in self.around(i) {
+                for i_near in self.around(i, true) {
                     self.cells[i_near].mines_around += 1;
                 }
             }
@@ -63,7 +63,7 @@ impl Field {
                 self.cells_discovered_count += 1;
 
                 if cell.mines_around == 0 {
-                    for i in self.around(position) {
+                    for i in self.around(position, false) {
                         self.discover(i);
                     }
                 }
@@ -73,14 +73,27 @@ impl Field {
         }
     }
 
-    pub fn around(&self, center: usize) -> Vec<usize> {
+    pub fn around(&self, center: usize, include_center: bool) -> Vec<usize> {
         // TODO: Find a way to a call lambda while iteration instead of returning an array
-        let mut positions = Vec::new();
+        let capacity;
 
-        for y in &SHIFTS {
-            for x in &SHIFTS {
-                if let Some(moved) = self.move_position(center, *x, *y) {
-                    positions.push(moved);
+        if include_center {
+            capacity = 9;
+        } else {
+            capacity = 8;
+        }
+
+        let mut positions = Vec::with_capacity(capacity);
+
+        for y in SHIFTS.iter() {
+            for x in SHIFTS.iter() {
+                let x = *x;
+                let y = *y;
+
+                if include_center || x != 0 || y != 0 {
+                    if let Some(moved) = self.move_position(center, x, y) {
+                        positions.push(moved);
+                    }
                 }
             }
         }
