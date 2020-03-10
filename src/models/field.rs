@@ -1,7 +1,9 @@
 use crate::models::cell::Cell;
 use crate::models::sapper::Sapper;
 use crate::utils;
+use rand::prelude::*;
 use termwiz::cell::AttributeChange;
+use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
 use termwiz::surface::Change;
 use termwiz::surface::Surface;
@@ -101,12 +103,12 @@ impl Field {
         return positions;
     }
 
-    pub fn move_position(&self, i: usize, shift_x: i32, shift_y: i32) -> Option<usize> {
-        // TODO: Try to optimize and simplify
+    // TODO: Try to optimize
+    pub fn move_position(&self, position: usize, shift_x: i32, shift_y: i32) -> Option<usize> {
         let size = self.size as i32;
-        let (mut x, mut y) = self.to_position(i as i32);
-        x += shift_x;
-        y += shift_y;
+        let (x, y) = self.to_coordinate(position);
+        let x = x as i32 + shift_x;
+        let y = y as i32 + shift_y;
 
         if 0 <= x && x < size && 0 <= y && y < size {
             return Some((size * y + x) as usize);
@@ -115,20 +117,59 @@ impl Field {
         }
     }
 
-    pub fn to_position(&self, i: i32) -> (i32, i32) {
-        let size = self.size as i32;
-        return (i % size, i / size);
+    pub fn to_coordinate(&self, position: usize) -> (usize, usize) {
+        return (position % self.size, position / self.size);
     }
 
-    pub fn render(&self, sapper: &Sapper) -> Surface {
+    // TODO: Try to optimize
+    pub fn to_distance(&self, p1: usize, p2: usize) -> usize {
+        let (x1, y1) = self.to_coordinate(p1);
+        let (x2, y2) = self.to_coordinate(p2);
+        let distance_x = utils::difference(x1, x2);
+        let distance_y = utils::difference(y1, y2);
+        return distance_x + distance_y;
+    }
+
+    pub fn generate_random_position(&self) -> usize {
+        return rand::thread_rng().gen_range(0, self.size * self.size);
+    }
+
+    pub fn render(
+        &self,
+        sappers: &Vec<Sapper>,
+        observer_id: u8,
+    ) -> Surface {
         let mut surface = Surface::new(self.size * 2 - 1, self.size);
+        let mut show_mines = true;
+        let mut observer = None;
+        let mut sapper_positions = Vec::with_capacity(sappers.len());
+
+        for sapper in sappers.iter() {
+            if sapper.is_alive {
+                if sapper.get_id() == observer_id {
+                    observer = Some(sapper);
+                } else {
+                    sapper_positions.push(sapper.position);
+                }
+
+                show_mines = false;
+            }
+        }
 
         for (i, cell) in self.cells.iter().enumerate() {
-            let mark = cell.get_mark(i, &sapper);
+            let is_observer_point = observer.map(|s| s.position == i).unwrap_or(false);
+            let mark = cell.get_mark(i, show_mines, observer);
+            let background;
+
+            if !is_observer_point && sapper_positions.contains(&i) {
+                background = AnsiColor::Grey.into();
+            } else {
+                background = Cell::get_color_background(mark);
+            }
 
             surface.add_change(Change::Attribute(AttributeChange::Foreground(Cell::get_color(mark))));
-            surface.add_change(Change::Attribute(AttributeChange::Background(Cell::get_color_background(mark))));
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(i == sapper.position)));
+            surface.add_change(Change::Attribute(AttributeChange::Background(background)));
+            surface.add_change(Change::Attribute(AttributeChange::Reverse(is_observer_point)));
             surface.add_change(format!("{}", mark));
 
             if (i + 1) % self.size != 0 {
@@ -147,6 +188,10 @@ impl Field {
 
     pub fn get_size(&self) -> usize {
         return self.size;
+    }
+
+    pub fn get_cells(&self) -> &Vec<Cell> {
+        return &self.cells;
     }
 
     pub fn get_mines_count(&self) -> usize {

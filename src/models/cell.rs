@@ -23,10 +23,10 @@ impl Cell {
         };
     }
 
-    pub fn get_mark(&self, position: usize, sapper: &Sapper) -> char {
+    pub fn get_mark(&self, position: usize, show_mines: bool, sapper: Option<&Sapper>) -> char {
         let mark;
 
-        if self.is_mined && !sapper.is_alive {
+        if self.is_mined && show_mines {
             mark = MARK_MINED;
         } else {
             if self.is_discovered {
@@ -36,7 +36,7 @@ impl Cell {
                     mark = char::from_digit(self.mines_around as u32, 10).unwrap_or('9');
                 }
             } else {
-                if sapper.has_marked(position) {
+                if sapper.map(|s| s.has_marked(position)).unwrap_or(false) {
                     mark = MARK_MARKED;
                 } else {
                     mark = MARK_UNDISCOVERED;

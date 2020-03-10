@@ -1,5 +1,6 @@
 use crate::models::field::Field;
 use crate::models::sapper::Sapper;
+use crate::models::sapper::SapperType;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
@@ -14,68 +15,66 @@ const STATISTICS_WIDTH: usize = 14;
 
 pub struct Game {
     pub field: Field,
-    pub sapper: Sapper,
+    pub sappers: Vec<Sapper>,
+    observer_id: u8,
 }
 
 impl Game {
-    pub fn new(field_size: usize, mines_density: f64) -> Self {
-        return Game {
-            field: Field::new(field_size, mines_density),
-            sapper: Sapper::new(),
+    pub fn new(field_size: usize, mines_density: f64, bots: u8, bots_reaction: f64) -> Self {
+        let field = Field::new(field_size, mines_density);
+
+        let mut sappers = Vec::with_capacity(bots as usize + 1);
+
+        sappers.push(Sapper::new(
+            0,
+            SapperType::Player,
+            field.generate_random_position(),
+            0.0,
+        ));
+
+        for i in 0..bots {
+            sappers.push(Sapper::new(
+                i + 1,
+                SapperType::Bot,
+                field.generate_random_position(),
+                bots_reaction,
+            ));
         }
+
+        return Game {
+            field,
+            sappers,
+            observer_id: 0,
+        };
     }
 
-    pub fn update(&mut self, input: &InputEvent) -> bool {
-        let mut update_screen = false;
-
-        if self.sapper.is_alive && !self.field.is_cleaned() {
-            match input {
-                InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
-                    self.sapper._move(0, -1, &self.field);
-                    update_screen = true;
-                }
-                InputEvent::Key(KeyEvent {key: KeyCode::DownArrow, ..}) => {
-                    self.sapper._move(0, 1, &self.field);
-                    update_screen = true;
-                }
-                InputEvent::Key(KeyEvent {key: KeyCode::LeftArrow, ..}) => {
-                    self.sapper._move(-1, 0, &self.field);
-                    update_screen = true;
-                }
-                InputEvent::Key(KeyEvent {key: KeyCode::RightArrow, ..}) => {
-                    self.sapper._move(1, 0, &self.field);
-                    update_screen = true;
-                }
-                InputEvent::Key(KeyEvent {key: KeyCode::Char('m'), ..}) => {
-                    self.sapper.toggle_mark();
-                    update_screen = true;
-                }
-                InputEvent::Key(KeyEvent {key: KeyCode::Char(' '), ..}) => {
-                    if !self.sapper.has_marked(self.sapper.position) {
-                        if self.field.discover(self.sapper.position) {
-                            self.sapper.increase_score();
-                        } else {
-                            self.sapper.is_alive = false;
-                        }
-
-                        update_screen = true;
-                    }
-                }
-                _ => {}
+    pub fn update(&mut self, input: &Option<InputEvent>) {
+        match input {
+            Some(InputEvent::Key(KeyEvent { key: KeyCode::PageUp, .. })) => {
+                self.observer_id = self.observer_id.saturating_sub(1);
             }
+            Some(InputEvent::Key(KeyEvent { key: KeyCode::PageDown, .. })) => {
+                self.observer_id = self.observer_id.saturating_add(1);
+            }
+            _ => {}
         }
 
-        return update_screen;
+        if !self.field.is_cleaned() {
+            for sapper in self.sappers.iter_mut() {
+                sapper.update(&mut self.field, &input);
+            }
+        }
     }
 
     pub fn render(&self) -> Surface {
+        let is_observer_alive = self.get_observer().map(|s| s.is_alive).unwrap_or(false);
         let mut surface = Surface::new(
             self.field.get_size() * 2 + STATISTICS_WIDTH + 1,
             self.field.get_size() + 4
         );
 
         surface.draw_from_screen(
-            &self.field.render(&self.sapper),
+            &self.field.render(&self.sappers, self.observer_id),
             2 + STATISTICS_WIDTH,
             0,
         );
@@ -86,7 +85,7 @@ impl Game {
             0,
         );
 
-        if !self.sapper.is_alive || self.field.is_cleaned() {
+        if !is_observer_alive || self.field.is_cleaned() {
             let message;
             let color;
 
@@ -95,7 +94,7 @@ impl Game {
                 y: Position::Absolute(1 + self.field.get_size()),
             });
 
-            if self.sapper.is_alive {
+            if is_observer_alive {
                 message = "Well done! You've found the all mines! Press Esc to go back to the main menu.";
                 color = AnsiColor::Green.into();
             } else {
@@ -112,48 +111,72 @@ impl Game {
 
     pub fn render_statistics(&self) -> Surface {
         let mut surface = Surface::new(STATISTICS_WIDTH, self.field.get_size());
-
-        surface.add_change("     #GOT #REM");
+        let sappers = self.get_sappers_sorted_by_score();
+        let marks = self.get_observer().map(|p| p.get_marks_count()).unwrap_or(0);
 
         surface.add_change(format!(
-            "#CLS {:04} {:04}",
+            "     #GOT #REM#CLS {:04} {:04}#MNS {:04} {:04}              #POS #SPR #SCR",
             self.field.get_cells_discovered_count(),
             self.field.get_cells_undiscovered_count(),
+            marks,
+            self.field.get_mines_count() as i32 - marks as i32,
         ));
-
-        surface.add_change(format!(
-            "#MNS {:04} {:04}",
-            self.sapper.get_marks_count(),
-            self.field.get_mines_count() as i32 - self.sapper.get_marks_count() as i32,
-        ));
-
-        surface.add_change("              ");
-        surface.add_change("#POS #SPR #SCR");
 
         for i in 0..(self.field.get_size() - 5) {
-            let name;
-            let score;
+            let sapper = sappers.get(i);
 
-            if i == 0 {
-                if !self.sapper.is_alive {
+            if let Some(sapper) = sappers.get(i) {
+                if !sapper.is_alive {
                     surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Red.into())));
-                } else if self.field.is_cleaned() {
-                    surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Green.into())));
                 }
 
-                surface.add_change(Change::Attribute(AttributeChange::Reverse(true)));
-                name = " YOU";
-                score = format!("{:04}", self.sapper.get_score());
-            } else {
-                name = " ---";
-                score = "----".to_string();
+                if sapper.get_id() == self.observer_id {
+                    surface.add_change(Change::Attribute(AttributeChange::Reverse(true)));
+
+                    if sapper.is_alive && self.field.is_cleaned() {
+                        surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Green.into())));
+                    }
+                }
             }
 
-            surface.add_change(format!("{:04} {} {}", i + 1, name, score));
+            surface.add_change(format!(
+                "{:04}  {} {}",
+                i + 1,
+                sapper.map(|s| s.get_name()).unwrap_or(&"---".to_string()),
+                sapper.map(|s| format!("{:04}", s.get_score())).unwrap_or("----".to_string()),
+            ));
+
             surface.add_change(Change::Attribute(AttributeChange::Foreground(ColorAttribute::Default)));
             surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
         }
 
         return surface;
+    }
+
+    pub fn get_sappers_sorted_by_score(&self) -> Vec<&Sapper> {
+        let mut sappers = Vec::with_capacity(self.sappers.len());
+
+        for sapper in self.sappers.iter() {
+            sappers.push(sapper);
+        }
+
+        sappers.sort_by(|sapper_1, sapper_2| {
+            let score_1 = sapper_1.get_score();
+            let score_2 = sapper_2.get_score();
+            return score_1.cmp(&score_2).reverse();
+        });
+
+        return sappers;
+    }
+
+    // TODO: Try no to use since it is slow
+    pub fn get_observer(&self) -> Option<&Sapper> {
+        for sapper in self.sappers.iter() {
+            if sapper.get_id() == self.observer_id {
+                return Some(sapper);
+            }
+        }
+
+        return None;
     }
 }

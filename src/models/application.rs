@@ -2,9 +2,10 @@ use crate::models::game::Game;
 use crate::models::ui::button::Button;
 use crate::models::ui::element::ElementEvent;
 use crate::models::ui::input_number::InputNumber;
-use crate::models::ui::spacer::Spacer;
 use crate::models::ui::menu::Menu;
 use crate::models::ui::page::Page;
+use crate::models::ui::spacer::Spacer;
+use std::time::Duration;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
 use termwiz::input::InputEvent;
@@ -25,9 +26,13 @@ const BACK: &'static str = "Back";
 const QUIT: &'static str = "Quit";
 const FIELD_SIZE: &'static str = "Field size   ";
 const MINES_DENSITY: &'static str = "Mines density";
+const BOTS: &'static str = "Bots         ";
+const BOTS_REACTION: &'static str = "Bots reaction";
 
 const DEFAULT_FILED_SIZE: usize = 24;
 const DEFAULT_MINES_DENSITY: f64 = 0.2;
+const DEFAULT_BOTS: u8 = 1;
+const DEFAULT_BOTS_REACTION: f64 = 1.0;
 
 #[derive(PartialEq)]
 pub enum ScreenUpdate {
@@ -68,6 +73,8 @@ impl Application {
         let mut new_game = Page::new(NEW_GAME);
         new_game.elements.push(Box::new(InputNumber::new(FIELD_SIZE, DEFAULT_FILED_SIZE as f64, 8.0, 32.0, 1.0)));
         new_game.elements.push(Box::new(InputNumber::new(MINES_DENSITY, DEFAULT_MINES_DENSITY, 0.0, 1.0, 0.01)));
+        new_game.elements.push(Box::new(InputNumber::new(BOTS, DEFAULT_BOTS as f64, 0.0, 254.0, 1.0)));
+        new_game.elements.push(Box::new(InputNumber::new(BOTS_REACTION, DEFAULT_BOTS_REACTION, 0.1, 5.0, 0.1)));
         new_game.elements.push(Box::new(Spacer::new()));
         new_game.elements.push(Box::new(Button::new(START, true)));
         new_game.elements.push(Box::new(Button::new(BACK, true)));
@@ -109,12 +116,11 @@ impl Application {
 
             self.screen_update = ScreenUpdate::None;
 
-            match terminal.terminal().poll_input(None) {
-                Ok(None) => {}
-                Ok(Some(input)) => {
+            match terminal.terminal().poll_input(Some(Duration::from_secs_f64(0.1))) {
+                Ok(input) => {
                     let mut is_menu_toggling = false;
 
-                    if let InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..}) = input {
+                    if let Some(InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..})) = input {
                         is_menu_toggling = !self.is_menu || (self.menu.is_on_base_page() && self.game.is_some());
                     }
 
@@ -122,45 +128,46 @@ impl Application {
                         self.toggle_menu();
                     } else {
                         if self.is_menu {
-                            self.menu.update(&input);
+                            if let Some(input) = input {
+                                self.menu.update(&input);
 
-                            let mut ui_events = self.menu.pull_events();
+                                let mut ui_events = self.menu.pull_events();
 
-                            while !ui_events.is_empty() {
-                                for ui_event in &ui_events {
-                                    match ui_event {
-                                        // TODO: Optimize str comparison
-                                        ElementEvent::ButtonPressed(CONTINUE) => {
-                                            self.toggle_menu();
+                                while !ui_events.is_empty() {
+                                    for ui_event in &ui_events {
+                                        match ui_event {
+                                            // TODO: Optimize str comparison
+                                            ElementEvent::ButtonPressed(CONTINUE) => {
+                                                self.toggle_menu();
+                                            }
+                                            ElementEvent::ButtonPressed(NEW_GAME) => {
+                                                self.menu.open(NEW_GAME);
+                                            }
+                                            ElementEvent::ButtonPressed(START) => {
+                                                self.start_new_game();
+                                            }
+                                            ElementEvent::ButtonPressed(BACK) => {
+                                                self.menu.back();
+                                            }
+                                            ElementEvent::ButtonPressed(QUIT) => {
+                                                self.stop();
+                                            }
+                                            ElementEvent::PageChanged => {
+                                                self.set_screen_update(ScreenUpdate::Partial);
+                                            }
+                                            ElementEvent::MenuChanged => {
+                                                self.set_screen_update(ScreenUpdate::Full);
+                                            }
+                                            _ => {}
                                         }
-                                        ElementEvent::ButtonPressed(NEW_GAME) => {
-                                            self.menu.open(NEW_GAME);
-                                        }
-                                        ElementEvent::ButtonPressed(START) => {
-                                            self.start_new_game();
-                                        }
-                                        ElementEvent::ButtonPressed(BACK) => {
-                                            self.menu.back();
-                                        }
-                                        ElementEvent::ButtonPressed(QUIT) => {
-                                            self.stop();
-                                        }
-                                        ElementEvent::PageChanged => {
-                                            self.set_screen_update(ScreenUpdate::Partial);
-                                        }
-                                        ElementEvent::MenuChanged => {
-                                            self.set_screen_update(ScreenUpdate::Full);
-                                        }
-                                        _ => {}
                                     }
-                                }
 
-                                ui_events = self.menu.pull_events();
+                                    ui_events = self.menu.pull_events();
+                                }
                             }
                         } else {
-                            if self.game.as_mut().unwrap().update(&input) {
-                                self.set_screen_update(ScreenUpdate::Partial);
-                            }
+                            self.game.as_mut().unwrap().update(&input);
+                            self.set_screen_update(ScreenUpdate::Partial);
                         }
                     }
                 }
@@ -178,6 +185,8 @@ impl Application {
     fn start_new_game(&mut self) {
         let mut field_size = DEFAULT_FILED_SIZE;
         let mut mines_density = DEFAULT_MINES_DENSITY;
+        let mut bots = DEFAULT_BOTS;
+        let mut bots_reaction = DEFAULT_BOTS_REACTION;
 
         if let Some(page) = self.menu.fetch_page_mut(NEW_GAME) {
             if let Some(v) = page.fetch_input_number_mut(FIELD_SIZE) {
@@ -187,6 +196,14 @@ impl Application {
             if let Some(v) = page.fetch_input_number_mut(MINES_DENSITY) {
                 mines_density = v.value;
             }
+
+            if let Some(v) = page.fetch_input_number_mut(BOTS) {
+                bots = v.value as u8;
+            }
+
+            if let Some(v) = page.fetch_input_number_mut(BOTS_REACTION) {
+                bots_reaction = v.value;
+            }
         }
 
         if let Some(page) = self.menu.fetch_page_mut(MAIN) {
@@ -195,7 +212,7 @@ impl Application {
             }
         }
 
-        self.game = Some(Game::new(field_size, mines_density));
+        self.game = Some(Game::new(field_size, mines_density, bots, bots_reaction));
         self.menu.back();
         self.toggle_menu();
     }
