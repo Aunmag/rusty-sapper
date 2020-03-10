@@ -47,7 +47,8 @@ impl Page {
     }
 
     pub fn render(&self) -> Surface {
-        let mut surface = Surface::new(WIDTH, self.elements.len() + 2);
+        let mut surface = Surface::new(WIDTH, self.elements.len() + 8);
+        let mut tooltip = None;
 
         surface.add_change(format!("### {}\r\n", self.label));
 
@@ -58,14 +59,25 @@ impl Page {
                 AnsiColor::Grey.into()
             };
 
+            if self.cursor == i {
+                tooltip = element.get_tooltip_full();
+            };
+
             surface.add_change(Change::Attribute(AttributeChange::Foreground(color)));
             surface.add_change(Change::Attribute(AttributeChange::Reverse(self.cursor == i)));
             surface.add_change("\r\n");
             surface.add_change(element.render());
         }
 
-        surface.add_change(Change::Attribute(AttributeChange::Foreground(ColorAttribute::Default)));
         surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
+
+        if let Some(tooltip) = tooltip {
+            surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Grey.into())));
+            surface.add_change("\r\n\r\n * ");
+            surface.add_change(tooltip);
+        }
+
+        surface.add_change(Change::Attribute(AttributeChange::Foreground(ColorAttribute::Default)));
 
         return surface;
     }

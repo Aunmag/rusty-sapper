@@ -27,7 +27,7 @@ impl Element for Button {
     }
 
     fn render(&self) -> String {
-        return format!(" - {} ", self.label);
+        return format!(" > {} ", self.label);
     }
 
     fn label(&self) -> &str {

@@ -71,10 +71,43 @@ impl Application {
         menu.add(page_main);
 
         let mut new_game = Page::new(NEW_GAME);
-        new_game.elements.push(Box::new(InputNumber::new(FIELD_SIZE, DEFAULT_FILED_SIZE as f64, 8.0, 32.0, 1.0)));
-        new_game.elements.push(Box::new(InputNumber::new(MINES_DENSITY, DEFAULT_MINES_DENSITY, 0.0, 1.0, 0.01)));
-        new_game.elements.push(Box::new(InputNumber::new(BOTS, DEFAULT_BOTS as f64, 0.0, 254.0, 1.0)));
-        new_game.elements.push(Box::new(InputNumber::new(BOTS_REACTION, DEFAULT_BOTS_REACTION, 0.1, 5.0, 0.1)));
+
+        new_game.elements.push(Box::new(InputNumber::new(
+            FIELD_SIZE,
+            DEFAULT_FILED_SIZE as f64,
+            8.0,
+            32.0,
+            1.0,
+            None,
+        )));
+
+        new_game.elements.push(Box::new(InputNumber::new(
+            MINES_DENSITY,
+            DEFAULT_MINES_DENSITY,
+            0.0,
+            1.0,
+            0.01,
+            Some(&"The probability that a cell will have a mine. 0 - no mines, 1 - every cell will be mined."),
+        )));
+
+        new_game.elements.push(Box::new(InputNumber::new(
+            BOTS,
+            DEFAULT_BOTS as f64,
+            0.0,
+            254.0,
+            1.0,
+            Some(&"The number of rival bots who will try to sweep mines as you too."),
+        )));
+
+        new_game.elements.push(Box::new(InputNumber::new(
+            BOTS_REACTION,
+            DEFAULT_BOTS_REACTION,
+            0.1,
+            5.0,
+            0.1,
+            Some(&"The time in seconds for a bot to make a move."),
+        )));
+
         new_game.elements.push(Box::new(Spacer::new()));
         new_game.elements.push(Box::new(Button::new(START, true)));
         new_game.elements.push(Box::new(Button::new(BACK, true)));

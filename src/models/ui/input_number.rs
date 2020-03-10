@@ -5,12 +5,15 @@ use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
 
+const TOOLTIP: &'static str = "Use left and right arrow keys to change the value.";
+
 pub struct InputNumber {
     pub label: &'static str,
     pub value: f64,
     pub min: f64,
     pub max: f64,
     pub step: f64,
+    pub tooltip_extra: Option<&'static str>,
     pub events: Vec<ElementEvent>,
 }
 
@@ -21,8 +24,9 @@ impl InputNumber {
         min: f64,
         max: f64,
         step: f64,
+        tooltip_extra: Option<&'static str>,
     ) -> Self {
-        return InputNumber { label, value, min, max, step, events: Vec::new() };
+        return InputNumber { label, value, min, max, step, tooltip_extra, events: Vec::new() };
     }
 
     fn normalize(&mut self) {
@@ -53,9 +57,9 @@ impl Element for InputNumber {
 
     fn render(&self) -> String {
         if self.value.fract() == 0.0 {
-            return format!(" * {} : {} ", self.label, self.value);
+            return format!(" $ {} : {} ", self.label, self.value);
         } else {
-            return format!(" * {} : {:.2} ", self.label, self.value);
+            return format!(" $ {} : {:.2} ", self.label, self.value);
         }
     }
 
@@ -65,6 +69,14 @@ impl Element for InputNumber {
 
     fn is_active(&self) -> bool {
         return true;
+    }
+
+    fn get_tooltip(&self) -> Option<&'static str> {
+        return Some(TOOLTIP);
+    }
+
+    fn get_tooltip_extra(&self) -> Option<&'static str> {
+        return self.tooltip_extra;
     }
 
     fn events_mut(&mut self) -> &mut Vec<ElementEvent> {
