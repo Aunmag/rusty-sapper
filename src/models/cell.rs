@@ -1,69 +1,63 @@
-use crate::models::sapper::Sapper;
-use std::char;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
 
-const MARK_UNDISCOVERED: char = '.';
-const MARK_DISCOVERED: char = ' ';
-const MARK_MARKED: char = '!';
-const MARK_MINED: char = '#';
-
 pub struct Cell {
-    pub is_mined: bool,
-    pub is_discovered: bool,
-    pub mines_around: usize,
+    pub mines_around: Option<u8>,
 }
 
 impl Cell {
-    pub fn new(is_mined: bool) -> Self {
-        return Cell {
-            is_mined,
-            is_discovered: false,
-            mines_around: 0,
-        };
+    pub fn new() -> Self {
+        return Cell { mines_around: None };
     }
 
-    pub fn get_mark(&self, position: usize, show_mines: bool, sapper: Option<&Sapper>) -> char {
-        let mark;
+    pub fn is_discovered(&self) -> bool {
+        return self.mines_around.is_some();
+    }
 
-        if self.is_mined && show_mines {
-            mark = MARK_MINED;
+    pub fn get_mark(&self, is_marked: bool, is_mined: bool) -> CellMark {
+        let symbol;
+        let mut foreground = ColorAttribute::Default;
+        let mut background = ColorAttribute::Default;
+
+        if is_marked {
+            symbol = '!';
+            background = AnsiColor::Maroon.into();
+        } else if is_mined {
+            symbol = '#';
+            background = AnsiColor::Maroon.into();
         } else {
-            if self.is_discovered {
-                if self.mines_around == 0 {
-                    mark = MARK_DISCOVERED;
+            if let Some(mines_around) = self.mines_around {
+                if mines_around == 0 {
+                    symbol = ' ';
                 } else {
-                    mark = char::from_digit(self.mines_around as u32, 10).unwrap_or('9');
+                    symbol = std::char::from_digit(mines_around as u32, 10).unwrap_or('?');
                 }
+
+                foreground = match mines_around {
+                    0 => foreground,
+                    1 => AnsiColor::Blue.into(),
+                    2 => AnsiColor::Green.into(),
+                    3 => AnsiColor::Red.into(),
+                    4 => AnsiColor::Navy.into(),
+                    5 => AnsiColor::Maroon.into(),
+                    6 => AnsiColor::Aqua.into(),
+                    _ => AnsiColor::Purple.into(),
+                };
             } else {
-                if sapper.map(|s| s.has_marked(position)).unwrap_or(false) {
-                    mark = MARK_MARKED;
-                } else {
-                    mark = MARK_UNDISCOVERED;
-                }
+                symbol = '.';
             }
         }
 
-        return mark;
-    }
-
-    pub fn get_color(mark: char) -> ColorAttribute {
-        return match mark {
-            '1' => AnsiColor::Blue.into(),
-            '2' => AnsiColor::Green.into(),
-            '3' => AnsiColor::Red.into(),
-            '4' => AnsiColor::Navy.into(),
-            '5' => AnsiColor::Maroon.into(),
-            '6' => AnsiColor::Aqua.into(),
-            '7' | '8' | '9' => AnsiColor::Purple.into(),
-            _ => ColorAttribute::Default,
+        return CellMark {
+            symbol,
+            foreground,
+            background,
         };
     }
+}
 
-    pub fn get_color_background(mark: char) -> ColorAttribute {
-        return match mark {
-            MARK_MARKED | MARK_MINED => AnsiColor::Maroon.into(),
-            _ => ColorAttribute::Default,
-        };
-    }
+pub struct CellMark {
+    pub symbol: char,
+    pub foreground: ColorAttribute,
+    pub background: ColorAttribute,
 }

@@ -2,6 +2,7 @@ use crate::models::cell::Cell;
 use crate::models::sapper::Sapper;
 use crate::utils;
 use rand::prelude::*;
+use std::collections::HashSet;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
@@ -13,8 +14,8 @@ const SHIFTS: [i32; 3] = [-1, 0, 1];
 pub struct Field {
     size: usize,
     cells: Vec<Cell>,
+    mines: HashSet<usize>,
     mines_density: f64,
-    mines_count: usize,
     cells_discovered_count: usize,
 }
 
@@ -23,56 +24,62 @@ impl Field {
         let mut cells = Vec::with_capacity(size * size);
 
         for _ in 0..(size * size) {
-            cells.push(Cell::new(false));
+            cells.push(Cell::new());
         }
 
         return Field {
             size,
             cells,
+            mines: HashSet::new(), // TODO: Optimize allocation
             mines_density: mines_density,
-            mines_count: 0,
             cells_discovered_count: 0,
         };
     }
 
     fn generate_mines(&mut self, excepting_position: usize) {
+        self.mines.clear(); // TODO: Optimize reallocation
+
         let excepting_positions = self.around(excepting_position, true);
 
-        for i in 0..(self.size * self.size) {
-            if utils::is_chance(self.mines_density) && !excepting_positions.contains(&i) {
-                self.cells[i].is_mined = true;
-                self.mines_count += 1;
-
-                for i_near in self.around(i, true) {
-                    self.cells[i_near].mines_around += 1;
-                }
+        for position in 0..(self.size * self.size) {
+            if utils::is_chance(self.mines_density) && !excepting_positions.contains(&position) {
+                self.mines.insert(position);
             }
         }
     }
 
     pub fn discover(&mut self, position: usize) -> bool {
-        if self.mines_count == 0 {
+        if self.mines.is_empty() {
             self.generate_mines(position);
         }
 
-        let cell = &mut self.cells[position];
-
-        if cell.is_mined {
+        if self.is_mined(position) {
             return false;
-        } else {
-            if !cell.is_discovered {
-                cell.is_discovered = true;
-                self.cells_discovered_count += 1;
+        }
 
-                if cell.mines_around == 0 {
-                    for i in self.around(position, false) {
-                        self.discover(i);
-                    }
+        let cell = &self.cells[position];
+
+        if !cell.is_discovered() {
+            let near_positions = self.around(position, false);
+            let mut mines_around = 0;
+
+            for position_near in near_positions.iter() {
+                if self.is_mined(*position_near) {
+                    mines_around += 1;
                 }
             }
 
-            return true;
+            self.cells[position].mines_around = Some(mines_around);
+            self.cells_discovered_count += 1;
+
+            if mines_around == 0 {
+                for position_near in near_positions.iter() {
+                    self.discover(*position_near);
+                }
+            }
         }
+
+        return true;
     }
 
     pub fn around(&self, center: usize, include_center: bool) -> Vec<usize> {
@@ -134,11 +141,7 @@ impl Field {
         return rand::thread_rng().gen_range(0, self.size * self.size);
     }
 
-    pub fn render(
-        &self,
-        sappers: &Vec<Sapper>,
-        observer_id: u8,
-    ) -> Surface {
+    pub fn render(&self, sappers: &Vec<Sapper>, observer_id: u8) -> Surface {
         let mut surface = Surface::new(self.size * 2 - 1, self.size);
         let mut show_mines = true;
         let mut observer = None;
@@ -158,19 +161,19 @@ impl Field {
 
         for (i, cell) in self.cells.iter().enumerate() {
             let is_observer_point = observer.map(|s| s.position == i).unwrap_or(false);
-            let mark = cell.get_mark(i, show_mines, observer);
-            let background;
+            let mut mark = cell.get_mark(
+                observer.map(|o| o.has_marked(i)).unwrap_or(false),
+                show_mines && self.is_mined(i),
+            );
 
             if !is_observer_point && sapper_positions.contains(&i) {
-                background = AnsiColor::Grey.into();
-            } else {
-                background = Cell::get_color_background(mark);
+                mark.background = AnsiColor::Grey.into();
             }
 
-            surface.add_change(Change::Attribute(AttributeChange::Foreground(Cell::get_color(mark))));
-            surface.add_change(Change::Attribute(AttributeChange::Background(background)));
+            surface.add_change(Change::Attribute(AttributeChange::Foreground(mark.foreground)));
+            surface.add_change(Change::Attribute(AttributeChange::Background(mark.background)));
             surface.add_change(Change::Attribute(AttributeChange::Reverse(is_observer_point)));
-            surface.add_change(format!("{}", mark));
+            surface.add_change(format!("{}", mark.symbol));
 
             if (i + 1) % self.size != 0 {
                 surface.add_change(Change::Attribute(AttributeChange::Background(ColorAttribute::Default)));
@@ -180,6 +183,10 @@ impl Field {
         }
 
         return surface;
+    }
+
+    fn is_mined(&self, position: usize) -> bool {
+        return self.mines.contains(&position);
     }
 
     pub fn is_cleaned(&self) -> bool {
@@ -195,7 +202,7 @@ impl Field {
     }
 
     pub fn get_mines_count(&self) -> usize {
-        return self.mines_count;
+        return self.mines.len();
     }
 
     pub fn get_cells_count(&self) -> usize {
@@ -207,6 +214,6 @@ impl Field {
     }
 
     pub fn get_cells_undiscovered_count(&self) -> usize {
-        return self.get_cells_count() - self.mines_count - self.cells_discovered_count;
+        return self.get_cells_count() - self.get_mines_count() - self.cells_discovered_count;
     }
 }

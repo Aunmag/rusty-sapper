@@ -96,10 +96,11 @@ impl Sapper {
         let mut task_distance = std::usize::MAX;
 
         for (cell_i, cell) in field.get_cells().iter().enumerate() {
-            if !cell.is_discovered {
+            if !cell.is_discovered() {
                 continue;
             }
 
+            let mines_around = cell.mines_around.unwrap_or(0);
             let mut undiscovered = Vec::with_capacity(8);
             let mut mines_found = 0;
 
@@ -108,15 +109,15 @@ impl Sapper {
 
                 if self.has_marked(cell_near_i) {
                     mines_found += 1;
-                } else if !cell_near.is_discovered {
+                } else if !cell_near.is_discovered() {
                     undiscovered.push(cell_near_i);
                 }
             }
 
-            let unmarked = cell.mines_around.saturating_sub(mines_found);
-            let is_mined = undiscovered.len() == unmarked;
+            let unmarked = mines_around.saturating_sub(mines_found);
+            let is_mined = undiscovered.len() == unmarked as usize;
 
-            if cell.mines_around == mines_found || is_mined {
+            if mines_around == mines_found || is_mined {
                 for i in undiscovered.iter() {
                     let i = *i;
                     let distance_test = field.to_distance(self.position, i);
