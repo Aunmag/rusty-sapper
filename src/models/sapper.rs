@@ -15,7 +15,6 @@ pub enum SapperType {
 }
 
 pub struct Sapper {
-    id: u8,
     pub _type: SapperType,
     pub position: usize,
     pub is_alive: bool,
@@ -30,9 +29,8 @@ struct BotTask {
 }
 
 impl Sapper {
-    pub fn new(id: u8, _type: SapperType, position: usize, reaction: f64) -> Self {
+    pub fn new(_type: SapperType, position: usize, reaction: f64) -> Self {
         return Sapper {
-            id,
             _type,
             position,
             is_alive: true,
@@ -198,8 +196,12 @@ impl Sapper {
         return self.marks.contains(&position);
     }
 
-    pub fn get_id(&self) -> u8 {
-        return self.id;
+    pub fn is_player(&self) -> bool {
+        if let SapperType::Player = self._type {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     pub fn get_name(&self) -> &'static str {

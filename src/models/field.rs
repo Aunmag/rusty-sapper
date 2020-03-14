@@ -141,16 +141,16 @@ impl Field {
         return rand::thread_rng().gen_range(0, self.size * self.size);
     }
 
-    pub fn render(&self, sappers: &Vec<Sapper>, observer_id: u8) -> Surface {
+    pub fn render(&self, sappers: &Vec<Sapper>) -> Surface {
         let mut surface = Surface::new(self.size * 2 - 1, self.size);
         let mut show_mines = true;
-        let mut observer = None;
+        let mut player = None;
         let mut sapper_positions = Vec::with_capacity(sappers.len());
 
         for sapper in sappers.iter() {
             if sapper.is_alive {
-                if sapper.get_id() == observer_id {
-                    observer = Some(sapper);
+                if sapper.is_player() {
+                    player = Some(sapper);
                 } else {
                     sapper_positions.push(sapper.position);
                 }
@@ -160,19 +160,19 @@ impl Field {
         }
 
         for (i, cell) in self.cells.iter().enumerate() {
-            let is_observer_point = observer.map(|s| s.position == i).unwrap_or(false);
+            let is_player_point = player.map(|s| s.position == i).unwrap_or(false);
             let mut mark = cell.get_mark(
-                observer.map(|o| o.has_marked(i)).unwrap_or(false),
+                player.map(|o| o.has_marked(i)).unwrap_or(false),
                 show_mines && self.is_mined(i),
             );
 
-            if !is_observer_point && sapper_positions.contains(&i) {
+            if !is_player_point && sapper_positions.contains(&i) {
                 mark.background = AnsiColor::Grey.into();
             }
 
             surface.add_change(Change::Attribute(AttributeChange::Foreground(mark.foreground)));
             surface.add_change(Change::Attribute(AttributeChange::Background(mark.background)));
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(is_observer_point)));
+            surface.add_change(Change::Attribute(AttributeChange::Reverse(is_player_point)));
             surface.add_change(format!("{}", mark.symbol));
 
             if (i + 1) % self.size != 0 {
