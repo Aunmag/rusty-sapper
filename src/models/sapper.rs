@@ -9,15 +9,15 @@ use termwiz::input::KeyEvent;
 const NAME_PLAYER: &'static str = "YOU";
 const NAME_BOT: &'static str = "BOT";
 
-pub enum SapperType {
+pub enum SapperBehavior {
     Player,
     Bot,
 }
 
 pub struct Sapper {
-    pub _type: SapperType,
-    pub position: usize,
-    pub is_alive: bool,
+    position: usize,
+    is_alive: bool,
+    behavior: SapperBehavior,
     marks: HashSet<usize>,
     timer: Timer,
     score: u16,
@@ -29,11 +29,11 @@ struct BotTask {
 }
 
 impl Sapper {
-    pub fn new(_type: SapperType, position: usize, reaction: f64) -> Self {
+    pub fn new(behavior: SapperBehavior, position: usize, reaction: f64) -> Sapper {
         return Sapper {
-            _type,
             position,
             is_alive: true,
+            behavior,
             marks: HashSet::new(),
             timer: Timer::new(Duration::from_secs_f64(reaction)),
             score: 0,
@@ -45,43 +45,61 @@ impl Sapper {
             return;
         }
 
-        match self._type {
-            SapperType::Player => {
+        match self.behavior {
+            SapperBehavior::Player => {
                 if let Some(input) = input {
                     self.update_as_player(field, input);
                 }
             }
-            SapperType::Bot => {
+            SapperBehavior::Bot => {
                 self.update_as_bot(field);
             }
         }
     }
 
-    pub fn update_as_player(&mut self, field: &mut Field, input: &InputEvent) {
+    fn update_as_player(&mut self, field: &mut Field, input: &InputEvent) {
         match input {
-            InputEvent::Key(KeyEvent { key: KeyCode::UpArrow, .. }) => {
-                self._move(0, -1, field);
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::UpArrow,
+                ..
+            }) => {
+                self.shift_position(0, -1, field);
             }
-            InputEvent::Key(KeyEvent { key: KeyCode::DownArrow, .. }) => {
-                self._move(0, 1, field);
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::DownArrow,
+                ..
+            }) => {
+                self.shift_position(0, 1, field);
             }
-            InputEvent::Key(KeyEvent { key: KeyCode::LeftArrow, .. }) => {
-                self._move(-1, 0, field);
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::LeftArrow,
+                ..
+            }) => {
+                self.shift_position(-1, 0, field);
             }
-            InputEvent::Key(KeyEvent { key: KeyCode::RightArrow, .. }) => {
-                self._move(1, 0, field);
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::RightArrow,
+                ..
+            }) => {
+                self.shift_position(1, 0, field);
             }
-            InputEvent::Key(KeyEvent { key: KeyCode::Char('m'), .. }) => {
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::Char('m'),
+                ..
+            }) => {
                 self.toggle_mark();
             }
-            InputEvent::Key(KeyEvent { key: KeyCode::Char(' '), .. }) => {
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::Char(' '),
+                ..
+            }) => {
                 self.discover(field);
             }
             _ => {}
         }
     }
 
-    pub fn update_as_bot(&mut self, field: &mut Field) {
+    fn update_as_bot(&mut self, field: &mut Field) {
         if self.timer.next_if_is_done() {
             if let Some(task) = self.find_task(field) {
                 self.perform_task(&task, field);
@@ -147,7 +165,7 @@ impl Sapper {
         }
     }
 
-    pub fn move_to(&mut self, target: usize, field: &Field) {
+    fn move_to(&mut self, target: usize, field: &Field) {
         let (x, y) = field.to_coordinate(self.position);
         let (target_x, target_y) = field.to_coordinate(target);
         let mut shift_x = 0;
@@ -164,17 +182,17 @@ impl Sapper {
         }
 
         if shift_x != 0 || shift_y != 0 {
-            self._move(shift_x, shift_y, field);
+            self.shift_position(shift_x, shift_y, field);
         }
     }
 
-    pub fn _move(&mut self, x: i32, y: i32, field: &Field) {
+    fn shift_position(&mut self, x: i32, y: i32, field: &Field) {
         if let Some(position) = field.move_position(self.position, x, y) {
             self.position = position;
         }
     }
 
-    pub fn toggle_mark(&mut self) {
+    fn toggle_mark(&mut self) {
         if self.has_marked(self.position) {
             self.marks.remove(&self.position);
         } else {
@@ -182,7 +200,7 @@ impl Sapper {
         }
     }
 
-    pub fn discover(&mut self, field: &mut Field) {
+    fn discover(&mut self, field: &mut Field) {
         if !self.has_marked(self.position) {
             if field.discover(self.position) {
                 self.score += 1;
@@ -197,17 +215,25 @@ impl Sapper {
     }
 
     pub fn is_player(&self) -> bool {
-        if let SapperType::Player = self._type {
+        if let SapperBehavior::Player = self.behavior {
             return true;
         } else {
             return false;
         }
     }
 
+    pub fn is_alive(&self) -> bool {
+        return self.is_alive;
+    }
+
+    pub fn get_position(&self) -> usize {
+        return self.position;
+    }
+
     pub fn get_name(&self) -> &'static str {
-        return match self._type {
-            SapperType::Player => NAME_PLAYER,
-            SapperType::Bot => NAME_BOT,
+        return match self.behavior {
+            SapperBehavior::Player => NAME_PLAYER,
+            SapperBehavior::Bot => NAME_BOT,
         };
     }
 

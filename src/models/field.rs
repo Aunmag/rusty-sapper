@@ -148,11 +148,11 @@ impl Field {
         let mut sapper_positions = Vec::with_capacity(sappers.len());
 
         for sapper in sappers.iter() {
-            if sapper.is_alive {
+            if sapper.is_alive() {
                 if sapper.is_player() {
                     player = Some(sapper);
                 } else {
-                    sapper_positions.push(sapper.position);
+                    sapper_positions.push(sapper.get_position());
                 }
 
                 show_mines = false;
@@ -160,7 +160,7 @@ impl Field {
         }
 
         for (i, cell) in self.cells.iter().enumerate() {
-            let is_player_point = player.map(|s| s.position == i).unwrap_or(false);
+            let is_player_point = player.map(|s| s.get_position() == i).unwrap_or(false);
             let mut mark = cell.get_mark(
                 player.map(|o| o.has_marked(i)).unwrap_or(false),
                 show_mines && self.is_mined(i),
@@ -170,13 +170,25 @@ impl Field {
                 mark.background = AnsiColor::Grey.into();
             }
 
-            surface.add_change(Change::Attribute(AttributeChange::Foreground(mark.foreground)));
-            surface.add_change(Change::Attribute(AttributeChange::Background(mark.background)));
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(is_player_point)));
+            surface.add_change(Change::Attribute(AttributeChange::Foreground(
+                mark.foreground,
+            )));
+
+            surface.add_change(Change::Attribute(AttributeChange::Background(
+                mark.background,
+            )));
+
+            surface.add_change(Change::Attribute(AttributeChange::Reverse(
+                is_player_point,
+            )));
+
             surface.add_change(format!("{}", mark.symbol));
 
             if (i + 1) % self.size != 0 {
-                surface.add_change(Change::Attribute(AttributeChange::Background(ColorAttribute::Default)));
+                surface.add_change(Change::Attribute(AttributeChange::Background(
+                    ColorAttribute::Default,
+                )));
+
                 surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
                 surface.add_change(" ");
             }

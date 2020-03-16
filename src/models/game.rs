@@ -1,6 +1,6 @@
 use crate::models::field::Field;
 use crate::models::sapper::Sapper;
-use crate::models::sapper::SapperType;
+use crate::models::sapper::SapperBehavior;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
@@ -23,23 +23,20 @@ impl Game {
         let mut sappers = Vec::with_capacity(bots as usize + 1);
 
         sappers.push(Sapper::new(
-            SapperType::Player,
+            SapperBehavior::Player,
             field.generate_random_position(),
             0.0,
         ));
 
         for _ in 0..bots {
             sappers.push(Sapper::new(
-                SapperType::Bot,
+                SapperBehavior::Bot,
                 field.generate_random_position(),
                 bots_reaction,
             ));
         }
 
-        return Game {
-            field,
-            sappers,
-        };
+        return Game { field, sappers };
     }
 
     pub fn update(&mut self, input: &Option<InputEvent>) {
@@ -51,10 +48,10 @@ impl Game {
     }
 
     pub fn render(&self) -> Surface {
-        let is_player_alive = self.get_player().map(|s| s.is_alive).unwrap_or(false);
+        let is_player_alive = self.get_player().map(|s| s.is_alive()).unwrap_or(false);
         let mut surface = Surface::new(
             self.field.get_size() * 2 + STATISTICS_WIDTH + 1,
-            self.field.get_size() + 4
+            self.field.get_size() + 4,
         );
 
         surface.draw_from_screen(
@@ -110,14 +107,14 @@ impl Game {
             let sapper = sappers.get(i);
 
             if let Some(sapper) = sappers.get(i) {
-                if !sapper.is_alive {
+                if !sapper.is_alive() {
                     surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Red.into())));
                 }
 
                 if sapper.is_player() {
                     surface.add_change(Change::Attribute(AttributeChange::Reverse(true)));
 
-                    if sapper.is_alive && self.field.is_cleaned() {
+                    if sapper.is_alive() && self.field.is_cleaned() {
                         surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Green.into())));
                     }
                 }
