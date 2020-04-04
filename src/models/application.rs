@@ -5,6 +5,7 @@ use crate::models::ui::input_number::InputNumber;
 use crate::models::ui::menu::Menu;
 use crate::models::ui::page::Page;
 use crate::models::ui::spacer::Spacer;
+use crate::models::ui::text::Text;
 use std::time::Duration;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -22,6 +23,7 @@ const MAIN: &'static str = "Main menu";
 const CONTINUE: &'static str = "Continue";
 const NEW_GAME: &'static str = "New game";
 const START: &'static str = "Start";
+const HELP: &'static str = "Help";
 const BACK: &'static str = "Back";
 const QUIT: &'static str = "Quit";
 const FIELD_SIZE: &'static str = "Field size   ";
@@ -66,6 +68,7 @@ impl Application {
         let mut page_main = Page::new(MAIN);
         page_main.elements.push(Box::new(Button::new(CONTINUE, false)));
         page_main.elements.push(Box::new(Button::new(NEW_GAME, true)));
+        page_main.elements.push(Box::new(Button::new(HELP, true)));
         page_main.elements.push(Box::new(Button::new(QUIT, true)));
         page_main.reset_cursor();
         menu.add(page_main);
@@ -113,6 +116,20 @@ impl Application {
         new_game.elements.push(Box::new(Button::new(BACK, true)));
         new_game.reset_cursor();
         menu.add(new_game);
+
+        let help_text = "\
+            - Use the arrow keys to move around the field\r\n\
+            - Press `M` to mark a cell\r\n\
+            - Press `Space` to discover a cell\r\n\
+            - Press `Escape` to switch between the game and menu\
+            ".to_string();
+
+        let mut help = Page::new(HELP);
+        help.elements.push(Box::new(Text::new(help_text)));
+        help.elements.push(Box::new(Spacer::new()));
+        help.elements.push(Box::new(Button::new(BACK, true)));
+        help.reset_cursor();
+        menu.add(help);
 
         return menu;
     }
@@ -178,6 +195,9 @@ impl Application {
                                         }
                                         Event::ButtonPressed(BACK) => {
                                             self.menu.back();
+                                        }
+                                        Event::ButtonPressed(HELP) => {
+                                            self.menu.open(HELP);
                                         }
                                         Event::ButtonPressed(QUIT) => {
                                             self.stop();

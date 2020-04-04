@@ -3,6 +3,7 @@ pub mod input_number;
 pub mod menu;
 pub mod page;
 pub mod spacer;
+pub mod text;
 
 use std::any::Any;
 use termwiz::input::InputEvent;
