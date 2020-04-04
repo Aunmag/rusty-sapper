@@ -1,5 +1,5 @@
-use crate::models::ui::element::ElementEvent;
 use crate::models::ui::page::Page;
+use crate::models::ui::Event;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
@@ -8,7 +8,7 @@ use termwiz::surface::Surface;
 pub struct Menu {
     pages: Vec<Page>,
     pages_history: Vec<usize>,
-    events: Vec<ElementEvent>,
+    events: Vec<Event>,
 }
 
 impl Menu {
@@ -21,20 +21,23 @@ impl Menu {
     }
 
     pub fn update(&mut self, input: &InputEvent) {
-        if let InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..}) = input {
+        if let InputEvent::Key(KeyEvent {
+            key: KeyCode::Escape,
+            ..
+        }) = input {
             if !self.pages_history.is_empty() {
                 self.back();
             }
         }
 
-        if let Some(page) = self.get_page_current() {
+        if let Some(page) = self.get_page_current_mut() {
             page.update(input);
         }
     }
 
-    // TODO: Not mut
-    pub fn render(&mut self) -> Surface {
-        return self.get_page_current()
+    pub fn render(&self) -> Surface {
+        return self
+            .get_page_current()
             .map(|p| p.render())
             .unwrap_or_else(|| Surface::new(1, 1));
     }
@@ -48,7 +51,7 @@ impl Menu {
             if std::ptr::eq(page.label, label) {
                 if i != *self.pages_history.last().unwrap_or(&0) {
                     self.pages_history.push(i);
-                    self.events.push(ElementEvent::MenuChanged);
+                    self.events.push(Event::MenuChanged);
                 }
 
                 break;
@@ -58,12 +61,12 @@ impl Menu {
 
     pub fn back(&mut self) {
         if !self.pages_history.is_empty() {
-            if let Some(current) = self.get_page_current() {
+            if let Some(current) = self.get_page_current_mut() {
                 current.reset_cursor();
             }
 
             self.pages_history.pop();
-            self.events.push(ElementEvent::MenuChanged);
+            self.events.push(Event::MenuChanged);
         }
     }
 
@@ -77,7 +80,12 @@ impl Menu {
         return None;
     }
 
-    pub fn get_page_current(&mut self) -> Option<&mut Page> {
+    pub fn get_page_current(&self) -> Option<&Page> {
+        return self.pages.get(*self.pages_history.last().unwrap_or(&0));
+    }
+
+    // TODO: Avoid WET code
+    pub fn get_page_current_mut(&mut self) -> Option<&mut Page> {
         return self.pages.get_mut(*self.pages_history.last().unwrap_or(&0));
     }
 
@@ -85,19 +93,17 @@ impl Menu {
         return self.pages_history.len() == 0;
     }
 
-    pub fn pull_events(&mut self) -> Vec<ElementEvent> {
-        let mut events = Vec::new();
+    pub fn pop_event(&mut self) -> Option<Event> {
+        if self.events.is_empty() {
+            for page in self.pages.iter_mut() {
+                page.pull_events_into(&mut self.events);
 
-        events.append(&mut self.events);
-
-        for page in &mut self.pages {
-            events.append(&mut page.events);
-
-            for element in &mut page.elements {
-                events.append(element.events_mut());
+                for element in page.elements.iter_mut() {
+                    element.pull_events_into(&mut self.events);
+                }
             }
         }
 
-        return events;
+        return self.events.pop();
     }
 }

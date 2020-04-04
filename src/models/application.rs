@@ -1,6 +1,6 @@
 use crate::models::game::Game;
 use crate::models::ui::button::Button;
-use crate::models::ui::element::ElementEvent;
+use crate::models::ui::Event;
 use crate::models::ui::input_number::InputNumber;
 use crate::models::ui::menu::Menu;
 use crate::models::ui::page::Page;
@@ -164,38 +164,32 @@ impl Application {
                             if let Some(input) = input {
                                 self.menu.update(&input);
 
-                                let mut ui_events = self.menu.pull_events();
-
-                                while !ui_events.is_empty() {
-                                    for ui_event in &ui_events {
-                                        match ui_event {
-                                            // TODO: Optimize str comparison
-                                            ElementEvent::ButtonPressed(CONTINUE) => {
-                                                self.toggle_menu();
-                                            }
-                                            ElementEvent::ButtonPressed(NEW_GAME) => {
-                                                self.menu.open(NEW_GAME);
-                                            }
-                                            ElementEvent::ButtonPressed(START) => {
-                                                self.start_new_game();
-                                            }
-                                            ElementEvent::ButtonPressed(BACK) => {
-                                                self.menu.back();
-                                            }
-                                            ElementEvent::ButtonPressed(QUIT) => {
-                                                self.stop();
-                                            }
-                                            ElementEvent::PageChanged => {
-                                                self.set_screen_update(ScreenUpdate::Partial);
-                                            }
-                                            ElementEvent::MenuChanged => {
-                                                self.set_screen_update(ScreenUpdate::Full);
-                                            }
-                                            _ => {}
+                                while let Some(ui_event) = self.menu.pop_event() {
+                                    match ui_event {
+                                        // TODO: Optimize str comparison
+                                        Event::ButtonPressed(CONTINUE) => {
+                                            self.toggle_menu();
                                         }
+                                        Event::ButtonPressed(NEW_GAME) => {
+                                            self.menu.open(NEW_GAME);
+                                        }
+                                        Event::ButtonPressed(START) => {
+                                            self.start_new_game();
+                                        }
+                                        Event::ButtonPressed(BACK) => {
+                                            self.menu.back();
+                                        }
+                                        Event::ButtonPressed(QUIT) => {
+                                            self.stop();
+                                        }
+                                        Event::PageChanged => {
+                                            self.set_screen_update(ScreenUpdate::Partial);
+                                        }
+                                        Event::MenuChanged => {
+                                            self.set_screen_update(ScreenUpdate::Full);
+                                        }
+                                        _ => {}
                                     }
-
-                                    ui_events = self.menu.pull_events();
                                 }
                             }
                         } else {
@@ -255,7 +249,7 @@ impl Application {
             self.is_menu = !self.is_menu;
 
             if self.is_menu {
-                if let Some(page) = self.menu.get_page_current() {
+                if let Some(page) = self.menu.get_page_current_mut() {
                     page.reset_cursor();
                 }
             }

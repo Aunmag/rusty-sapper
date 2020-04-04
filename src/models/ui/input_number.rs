@@ -1,5 +1,5 @@
-use crate::models::ui::element::Element;
-use crate::models::ui::element::ElementEvent;
+use crate::models::ui::Element;
+use crate::models::ui::Event;
 use std::any::Any;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
@@ -14,7 +14,7 @@ pub struct InputNumber {
     pub max: f64,
     pub step: f64,
     pub tooltip_extra: Option<&'static str>,
-    pub events: Vec<ElementEvent>,
+    events: Vec<Event>,
 }
 
 impl InputNumber {
@@ -26,7 +26,15 @@ impl InputNumber {
         step: f64,
         tooltip_extra: Option<&'static str>,
     ) -> Self {
-        return InputNumber { label, value, min, max, step, tooltip_extra, events: Vec::new() };
+        return InputNumber {
+            label,
+            value,
+            min,
+            max,
+            step,
+            tooltip_extra,
+            events: Vec::new(),
+        };
     }
 
     fn normalize(&mut self) {
@@ -41,15 +49,21 @@ impl InputNumber {
 impl Element for InputNumber {
     fn update(&mut self, input: &InputEvent) {
         match input {
-            InputEvent::Key(KeyEvent {key: KeyCode::LeftArrow, ..}) => {
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::LeftArrow,
+                ..
+            }) => {
                 self.value -= self.step;
                 self.normalize();
-                self.events.push(ElementEvent::PageChanged);
+                self.events.push(Event::PageChanged);
             }
-            InputEvent::Key(KeyEvent {key: KeyCode::RightArrow, ..}) => {
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::RightArrow,
+                ..
+            }) => {
                 self.value += self.step;
                 self.normalize();
-                self.events.push(ElementEvent::PageChanged);
+                self.events.push(Event::PageChanged);
             }
             _ => {}
         }
@@ -63,11 +77,19 @@ impl Element for InputNumber {
         }
     }
 
-    fn label(&self) -> &str {
+    fn pull_events_into(&mut self, buffer: &mut Vec<Event>) {
+        buffer.append(&mut self.events);
+    }
+
+    fn get_label(&self) -> &str {
         return self.label;
     }
 
     fn is_active(&self) -> bool {
+        return true;
+    }
+
+    fn is_selectable(&self) -> bool {
         return true;
     }
 
@@ -77,10 +99,6 @@ impl Element for InputNumber {
 
     fn get_tooltip_extra(&self) -> Option<&'static str> {
         return self.tooltip_extra;
-    }
-
-    fn events_mut(&mut self) -> &mut Vec<ElementEvent> {
-        return &mut self.events;
     }
 
     fn as_any(&mut self) -> &mut dyn Any {

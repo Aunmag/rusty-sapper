@@ -1,37 +1,30 @@
-use crate::models::ui::element::Element;
-use crate::models::ui::element::ElementEvent;
+use crate::models::ui::Element;
+use crate::models::ui::EMPTY_LABEL;
 use std::any::Any;
-use termwiz::input::InputEvent;
 
-const LABEL: &'static str = "";
-
-pub struct Spacer {
-    events: Vec<ElementEvent>,
-}
+pub struct Spacer {}
 
 impl Spacer {
     pub fn new() -> Self {
-        return Spacer { events: Vec::new() };
+        return Spacer {};
     }
 }
 
 impl Element for Spacer {
-    fn update(&mut self, _input: &InputEvent) {}
-
     fn render(&self) -> String {
-        return LABEL.to_string();
+        return EMPTY_LABEL.to_string();
     }
 
-    fn label(&self) -> &str {
-        return LABEL;
+    fn get_label(&self) -> &str {
+        return EMPTY_LABEL;
     }
 
     fn is_active(&self) -> bool {
-        return false;
+        return true;
     }
 
-    fn events_mut(&mut self) -> &mut Vec<ElementEvent> {
-        return &mut self.events;
+    fn is_selectable(&self) -> bool {
+        return false;
     }
 
     fn as_any(&mut self) -> &mut dyn Any {

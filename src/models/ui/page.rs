@@ -1,7 +1,7 @@
 use crate::models::ui::button::Button;
-use crate::models::ui::element::Element;
-use crate::models::ui::element::ElementEvent;
 use crate::models::ui::input_number::InputNumber;
+use crate::models::ui::Element;
+use crate::models::ui::Event;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
@@ -17,7 +17,7 @@ pub struct Page {
     pub label: &'static str,
     pub elements: Vec<Box<dyn Element>>,
     pub cursor: usize,
-    pub events: Vec::<ElementEvent>,
+    events: Vec<Event>,
 }
 
 impl Page {
@@ -32,10 +32,16 @@ impl Page {
 
     pub fn update(&mut self, input: &InputEvent) {
         match input {
-            InputEvent::Key(KeyEvent {key: KeyCode::UpArrow, ..}) => {
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::UpArrow,
+                ..
+            }) => {
                 self.move_cursor(false);
             }
-            InputEvent::Key(KeyEvent {key: KeyCode::DownArrow, ..}) => {
+            InputEvent::Key(KeyEvent {
+                key: KeyCode::DownArrow,
+                ..
+            }) => {
                 self.move_cursor(true);
             }
             _ => {}
@@ -64,7 +70,9 @@ impl Page {
             };
 
             surface.add_change(Change::Attribute(AttributeChange::Foreground(color)));
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(self.cursor == i)));
+            surface.add_change(Change::Attribute(AttributeChange::Reverse(
+                self.cursor == i,
+            )));
             surface.add_change("\r\n");
             surface.add_change(element.render());
         }
@@ -72,24 +80,36 @@ impl Page {
         surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
 
         if let Some(tooltip) = tooltip {
-            surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Grey.into())));
+            surface.add_change(Change::Attribute(AttributeChange::Foreground(
+                AnsiColor::Grey.into(),
+            )));
             surface.add_change("\r\n\r\n * ");
             surface.add_change(tooltip);
         }
 
-        surface.add_change(Change::Attribute(AttributeChange::Foreground(ColorAttribute::Default)));
+        surface.add_change(Change::Attribute(AttributeChange::Foreground(
+            ColorAttribute::Default,
+        )));
 
         return surface;
     }
 
     pub fn reset_cursor(&mut self) {
+        let previous = self.cursor;
         self.cursor = 0;
 
-        if !self.elements.get(self.cursor).map(|c| c.is_active()).unwrap_or(false) {
+        if !self
+            .elements
+            .get(self.cursor)
+            .map(|c| c.is_active() && c.is_selectable())
+            .unwrap_or(false)
+        {
             self.move_cursor(true);
         }
 
-        self.events.push(ElementEvent::PageChanged); // TODO: Optimize
+        if self.cursor != previous {
+            self.events.push(Event::PageChanged);
+        }
     }
 
     pub fn move_cursor(&mut self, offset: bool) {
@@ -102,9 +122,14 @@ impl Page {
                 cursor = cursor.saturating_sub(1);
             }
 
-            if self.elements.get(cursor).map(|c| c.is_active()).unwrap_or(false) {
+            if self
+                .elements
+                .get(cursor)
+                .map(|c| c.is_selectable())
+                .unwrap_or(false)
+            {
                 self.cursor = cursor;
-                self.events.push(ElementEvent::PageChanged);
+                self.events.push(Event::PageChanged);
                 break;
             }
 
@@ -114,10 +139,14 @@ impl Page {
         }
     }
 
+    pub fn pull_events_into(&mut self, buffer: &mut Vec<Event>) {
+        buffer.append(&mut self.events);
+    }
+
     // TODO: Optimize
     pub fn fetch_element_mut(&mut self, label: &str) -> Option<&mut Box<dyn Element>> {
         for element in &mut self.elements {
-            if std::ptr::eq(element.label(), label) {
+            if std::ptr::eq(element.get_label(), label) {
                 return Some(element);
             }
         }
@@ -125,13 +154,17 @@ impl Page {
         return None;
     }
 
-    // TODO: Fix WET code
+    // TODO: Avoid WET code
     pub fn fetch_input_number_mut(&mut self, label: &str) -> Option<&mut InputNumber> {
-        return self.fetch_element_mut(label).and_then(|e| e.as_any().downcast_mut::<InputNumber>());
+        return self
+            .fetch_element_mut(label)
+            .and_then(|e| e.as_any().downcast_mut::<InputNumber>());
     }
 
-    // TODO: Fix WET code
+    // TODO: Avoid WET code
     pub fn fetch_button_mut(&mut self, label: &str) -> Option<&mut Button> {
-        return self.fetch_element_mut(label).and_then(|e| e.as_any().downcast_mut::<Button>());
+        return self
+            .fetch_element_mut(label)
+            .and_then(|e| e.as_any().downcast_mut::<Button>());
     }
 }
