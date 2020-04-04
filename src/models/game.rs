@@ -106,7 +106,7 @@ impl Game {
         for i in 0..(self.field.get_size() - 5) {
             let sapper = sappers.get(i);
 
-            if let Some(sapper) = sappers.get(i) {
+            if let Some(sapper) = sapper {
                 if !sapper.is_alive() {
                     surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Red.into())));
                 }
