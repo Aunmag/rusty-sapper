@@ -168,15 +168,21 @@ impl Application {
 
             match terminal.terminal().poll_input(Some(Duration::from_secs_f64(0.1))) {
                 Ok(input) => {
-                    let mut is_menu_toggling = false;
+                    let mut do_break = false;
 
                     if let Some(InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..})) = input {
-                        is_menu_toggling = !self.is_menu || (self.menu.is_on_base_page() && self.game.is_some());
+                        if !self.is_menu || (self.menu.is_on_base_page() && self.game.is_some()) {
+                            self.toggle_menu();
+                            do_break = true;
+                        }
                     }
 
-                    if is_menu_toggling {
-                        self.toggle_menu();
-                    } else {
+                    if let Some(InputEvent::Resized { .. }) = input {
+                        self.screen_update = ScreenUpdate::Full;
+                        do_break = true;
+                    }
+
+                    if !do_break {
                         if self.is_menu {
                             if let Some(input) = input {
                                 self.menu.update(&input);
