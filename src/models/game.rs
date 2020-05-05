@@ -38,10 +38,10 @@ impl Game {
         return Game { field, sappers };
     }
 
-    pub fn update(&mut self, input: &Option<InputEvent>) {
+    pub fn update(&mut self, input: Option<&InputEvent>) {
         if !self.field.is_cleaned() {
             for sapper in self.sappers.iter_mut() {
-                sapper.update(&mut self.field, &input);
+                sapper.update(&mut self.field, input);
             }
         }
     }

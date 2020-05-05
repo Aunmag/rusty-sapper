@@ -219,7 +219,7 @@ impl Application {
                                 }
                             }
                         } else {
-                            self.game.as_mut().unwrap().update(&input);
+                            self.game.as_mut().unwrap().update(input.as_ref());
                             self.set_screen_update(ScreenUpdate::Partial);
                         }
                     }

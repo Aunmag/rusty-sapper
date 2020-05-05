@@ -40,7 +40,7 @@ impl Sapper {
         };
     }
 
-    pub fn update(&mut self, field: &mut Field, input: &Option<InputEvent>) {
+    pub fn update(&mut self, field: &mut Field, input: Option<&InputEvent>) {
         if !self.is_alive {
             return;
         }
