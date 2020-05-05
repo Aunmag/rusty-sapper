@@ -3,11 +3,15 @@ use termwiz::color::ColorAttribute;
 
 pub struct Cell {
     pub mines_around: Option<u8>,
+    pub is_exploded: bool,
 }
 
 impl Cell {
     pub fn new() -> Self {
-        return Cell { mines_around: None };
+        return Cell {
+            mines_around: None,
+            is_exploded: false,
+        };
     }
 
     pub fn is_discovered(&self) -> bool {
@@ -22,7 +26,7 @@ impl Cell {
         if is_marked {
             symbol = '!';
             background = AnsiColor::Maroon.into();
-        } else if is_mined {
+        } else if is_mined || self.is_exploded {
             symbol = '#';
             background = AnsiColor::Maroon.into();
         } else {

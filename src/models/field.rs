@@ -54,6 +54,7 @@ impl Field {
         }
 
         if self.is_mined(position) {
+            self.cells[position].is_exploded = true;
             return false;
         }
 

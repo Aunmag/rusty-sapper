@@ -123,7 +123,7 @@ impl Sapper {
             for cell_near_i in field.around(cell_i, false) {
                 let cell_near = &field.get_cells()[cell_near_i];
 
-                if self.has_marked(cell_near_i) {
+                if cell_near.is_exploded || self.has_marked(cell_near_i) {
                     mines_found += 1;
                 } else if !cell_near.is_discovered() {
                     undiscovered.push(cell_near_i);
