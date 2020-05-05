@@ -6,10 +6,9 @@ use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
 use termwiz::input::InputEvent;
 use termwiz::surface::Change;
-use termwiz::surface::Position;
 use termwiz::surface::Surface;
 
-const STATISTICS_WIDTH: usize = 14;
+const STATISTICS_WIDTH: usize = 16;
 
 pub struct Game {
     pub field: Field,
@@ -48,87 +47,63 @@ impl Game {
     }
 
     pub fn render(&self) -> Surface {
-        let is_player_alive = self.get_player().map(|s| s.is_alive()).unwrap_or(false);
+        let statistics = self.render_statistics();
+        let field = self.field.render(&self.sappers);
+        let (statistics_width, statistics_height) = statistics.dimensions();
+        let (field_width, field_height) = field.dimensions();
+
         let mut surface = Surface::new(
-            self.field.get_size() * 2 + STATISTICS_WIDTH + 1,
-            self.field.get_size() + 4,
+            statistics_width + field_width,
+            std::cmp::max(statistics_height, field_height),
         );
 
-        surface.draw_from_screen(
-            &self.field.render(&self.sappers),
-            2 + STATISTICS_WIDTH,
-            0,
-        );
-
-        surface.draw_from_screen(
-            &self.render_statistics(),
-            0,
-            0,
-        );
-
-        if !is_player_alive || self.field.is_cleaned() {
-            let message;
-            let color;
-
-            surface.add_change(Change::CursorPosition {
-                x: Position::Absolute(0),
-                y: Position::Absolute(1 + self.field.get_size()),
-            });
-
-            if is_player_alive {
-                message = "Well done! You've found the all mines! Press Esc to go back to the main menu.";
-                color = AnsiColor::Green.into();
-            } else {
-                message = "Sorry, but you've taken the wrong step. Game over. Press Esc to go back to the main menu.";
-                color = AnsiColor::Red.into();
-            }
-
-            surface.add_change(Change::Attribute(AttributeChange::Foreground(color)));
-            surface.add_change(message);
-        }
+        surface.draw_from_screen(&statistics, 0, 0);
+        surface.draw_from_screen(&field, statistics_width, 0);
 
         return surface;
     }
 
     pub fn render_statistics(&self) -> Surface {
-        let mut surface = Surface::new(STATISTICS_WIDTH, self.field.get_size());
-        let sappers = self.get_sappers_sorted_by_score();
+        let mut surface = Surface::new(STATISTICS_WIDTH, self.sappers.len() + 5);
         let marks = self.get_player().map(|p| p.get_marks_count()).unwrap_or(0);
 
         surface.add_change(format!(
-            "     #GOT #REM#CLS {:04} {:04}#MNS {:04} {:04}              #POS #SPR #SCR",
+            "     #GOT #REM  #CLS {:04} {:04}  #MNS {:04} {:04}                  #POS #SPR #SCR  ",
             self.field.get_cells_discovered_count(),
             self.field.get_cells_undiscovered_count(),
             marks,
             self.field.get_mines_count() as i32 - marks as i32,
         ));
 
-        for i in 0..(self.field.get_size() - 5) {
-            let sapper = sappers.get(i);
+        for (i, sapper) in self.get_sappers_sorted_by_score().iter().enumerate() {
+            if !sapper.is_alive() {
+                surface.add_change(Change::Attribute(AttributeChange::Foreground(
+                    AnsiColor::Red.into(),
+                )));
+            }
 
-            if let Some(sapper) = sapper {
-                if !sapper.is_alive() {
-                    surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Red.into())));
-                }
+            if sapper.is_player() {
+                surface.add_change(Change::Attribute(AttributeChange::Reverse(true)));
 
-                if sapper.is_player() {
-                    surface.add_change(Change::Attribute(AttributeChange::Reverse(true)));
-
-                    if sapper.is_alive() && self.field.is_cleaned() {
-                        surface.add_change(Change::Attribute(AttributeChange::Foreground(AnsiColor::Green.into())));
-                    }
+                if sapper.is_alive() && self.field.is_cleaned() {
+                    surface.add_change(Change::Attribute(AttributeChange::Foreground(
+                        AnsiColor::Green.into(),
+                    )));
                 }
             }
 
             surface.add_change(format!(
                 "{:04}  {} {}",
                 i + 1,
-                sapper.map(|s| s.get_name()).unwrap_or(&"---".to_string()),
-                sapper.map(|s| format!("{:04}", s.get_score())).unwrap_or("----".to_string()),
+                sapper.get_name(),
+                format!("{:04}", sapper.get_score()),
             ));
 
-            surface.add_change(Change::Attribute(AttributeChange::Foreground(ColorAttribute::Default)));
+            surface.add_change(Change::Attribute(AttributeChange::Foreground(
+                ColorAttribute::Default,
+            )));
             surface.add_change(Change::Attribute(AttributeChange::Reverse(false)));
+            surface.add_change("  ");
         }
 
         return surface;

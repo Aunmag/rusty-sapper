@@ -78,7 +78,7 @@ impl Application {
         new_game.elements.push(Box::new(InputNumber::new(
             FIELD_SIZE,
             DEFAULT_FILED_SIZE as f64,
-            8.0,
+            1.0,
             32.0,
             1.0,
             None,

@@ -142,17 +142,17 @@ impl Field {
     }
 
     pub fn render(&self, sappers: &Vec<Sapper>) -> Surface {
-        let mut surface = Surface::new(self.size * 2 - 1, self.size);
+        let mut surface = Surface::new((self.size * 2).saturating_sub(1), self.size);
         let mut show_mines = true;
         let mut player = None;
-        let mut sapper_positions = Vec::with_capacity(sappers.len());
+        let mut sapper_positions = HashSet::with_capacity(sappers.len());
 
         for sapper in sappers.iter() {
             if sapper.is_alive() {
                 if sapper.is_player() {
                     player = Some(sapper);
                 } else {
-                    sapper_positions.push(sapper.get_position());
+                    sapper_positions.insert(sapper.get_position());
                 }
 
                 show_mines = false;
@@ -203,10 +203,6 @@ impl Field {
 
     pub fn is_cleaned(&self) -> bool {
         return self.get_cells_undiscovered_count() == 0;
-    }
-
-    pub fn get_size(&self) -> usize {
-        return self.size;
     }
 
     pub fn get_cells(&self) -> &Vec<Cell> {
