@@ -23,6 +23,7 @@ const MAIN: &'static str = "Main menu";
 const CONTINUE: &'static str = "Continue";
 const NEW_GAME: &'static str = "New game";
 const START: &'static str = "Start";
+const RESET: &'static str = "Reset";
 const HELP: &'static str = "Help";
 const BACK: &'static str = "Back";
 const QUIT: &'static str = "Quit";
@@ -113,6 +114,7 @@ impl Application {
 
         new_game.elements.push(Box::new(Spacer::new()));
         new_game.elements.push(Box::new(Button::new(START, true)));
+        new_game.elements.push(Box::new(Button::new(RESET, true)));
         new_game.elements.push(Box::new(Button::new(BACK, true)));
         new_game.reset_cursor();
         menu.add(new_game);
@@ -199,6 +201,9 @@ impl Application {
                                         Event::ButtonPressed(START) => {
                                             self.start_new_game();
                                         }
+                                        Event::ButtonPressed(RESET) => {
+                                            self.reset_settings();
+                                        }
                                         Event::ButtonPressed(BACK) => {
                                             self.menu.back();
                                         }
@@ -268,6 +273,28 @@ impl Application {
         self.game = Some(Game::new(field_size, mines_density, bots, bots_reaction));
         self.menu.back();
         self.toggle_menu();
+    }
+
+    fn reset_settings(&mut self) {
+        if let Some(page) = self.menu.fetch_page_mut(NEW_GAME) {
+            if let Some(v) = page.fetch_input_number_mut(FIELD_SIZE) {
+                v.value = DEFAULT_FILED_SIZE as f64;
+            }
+
+            if let Some(v) = page.fetch_input_number_mut(MINES_DENSITY) {
+                v.value = DEFAULT_MINES_DENSITY as f64;
+            }
+
+            if let Some(v) = page.fetch_input_number_mut(BOTS) {
+                v.value = DEFAULT_BOTS as f64;
+            }
+
+            if let Some(v) = page.fetch_input_number_mut(BOTS_REACTION) {
+                v.value = DEFAULT_BOTS_REACTION as f64;
+            }
+
+            self.set_screen_update(ScreenUpdate::Partial);
+        }
     }
 
     fn toggle_menu(&mut self) {
