@@ -18,7 +18,7 @@ impl Cell {
         return self.mines_around.is_some();
     }
 
-    pub fn get_mark(&self, is_marked: bool, is_mined: bool) -> CellMark {
+    pub fn get_mark(&self, is_marked: bool) -> CellMark {
         let symbol;
         let mut foreground = ColorAttribute::Default;
         let mut background = ColorAttribute::Default;
@@ -26,7 +26,7 @@ impl Cell {
         if is_marked {
             symbol = '!';
             background = AnsiColor::Maroon.into();
-        } else if is_mined || self.is_exploded {
+        } else if self.is_exploded {
             symbol = '#';
             background = AnsiColor::Maroon.into();
         } else {

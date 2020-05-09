@@ -48,12 +48,20 @@ impl Field {
         }
     }
 
+    pub fn explode_mines(&mut self) {
+        for position in self.mines.iter() {
+            self.cells[*position].is_exploded = true;
+        }
+
+        self.mines.clear();
+    }
+
     pub fn discover(&mut self, position: usize) -> bool {
         if self.mines.is_empty() {
             self.generate_mines(position);
         }
 
-        if self.is_mined(position) {
+        if self.mines.remove(&position) {
             self.cells[position].is_exploded = true;
             return false;
         }
@@ -144,7 +152,6 @@ impl Field {
 
     pub fn render(&self, sappers: &Vec<Sapper>) -> Surface {
         let mut surface = Surface::new((self.size * 2).saturating_sub(1), self.size);
-        let mut show_mines = true;
         let mut player = None;
         let mut sapper_positions = HashSet::with_capacity(sappers.len());
 
@@ -155,17 +162,12 @@ impl Field {
                 } else {
                     sapper_positions.insert(sapper.get_position());
                 }
-
-                show_mines = false;
             }
         }
 
         for (i, cell) in self.cells.iter().enumerate() {
             let is_player_point = player.map(|s| s.get_position() == i).unwrap_or(false);
-            let mut mark = cell.get_mark(
-                player.map(|o| o.has_marked(i)).unwrap_or(false),
-                show_mines && self.is_mined(i),
-            );
+            let mut mark = cell.get_mark(player.map(|o| o.has_marked(i)).unwrap_or(false));
 
             if !is_player_point && sapper_positions.contains(&i) {
                 mark.background = AnsiColor::Grey.into();

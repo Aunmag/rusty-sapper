@@ -39,10 +39,20 @@ impl Game {
     }
 
     pub fn update(&mut self, input: Option<&InputEvent>) {
+        let mut explode_mines = !self.sappers.is_empty();
+
         if !self.field.is_cleaned() {
             for sapper in self.sappers.iter_mut() {
                 sapper.update(&mut self.field, input);
+
+                if explode_mines && sapper.is_alive() {
+                    explode_mines = false;
+                }
             }
+        }
+
+        if explode_mines {
+            self.field.explode_mines();
         }
     }
 
