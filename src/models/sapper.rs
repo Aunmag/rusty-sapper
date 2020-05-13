@@ -1,3 +1,4 @@
+use crate::models::cell::Cell;
 use crate::models::field::Field;
 use crate::utils::Timer;
 use std::collections::HashSet;
@@ -41,6 +42,8 @@ impl Sapper {
     }
 
     pub fn update(&mut self, field: &mut Field, input: Option<&InputEvent>) {
+        self.remove_useless_marks(field); // TODO: Try to optimize
+
         if !self.is_alive {
             return;
         }
@@ -87,7 +90,7 @@ impl Sapper {
                 key: KeyCode::Char('m'),
                 ..
             }) => {
-                self.toggle_mark();
+                self.toggle_mark(field);
             }
             InputEvent::Key(KeyEvent {
                 key: KeyCode::Char(' '),
@@ -156,7 +159,7 @@ impl Sapper {
     fn perform_task(&mut self, task: &BotTask, field: &mut Field) {
         if self.position == task.position {
             if task.is_mined {
-                self.toggle_mark();
+                self.toggle_mark(field);
             } else {
                 self.discover(field);
             }
@@ -192,12 +195,26 @@ impl Sapper {
         }
     }
 
-    fn toggle_mark(&mut self) {
-        if self.has_marked(self.position) {
-            self.marks.remove(&self.position);
-        } else {
-            self.marks.insert(self.position);
+    fn toggle_mark(&mut self, field: &Field) {
+        let i = self.position;
+
+        if !self.marks.remove(&i) {
+            if field.get_cells().get(i).map(Cell::is_markable).unwrap_or(false) {
+                self.marks.insert(i);
+            }
         }
+    }
+
+    fn remove_useless_marks(&mut self, field: &Field) {
+        self.marks = self.marks.iter().filter_map(|i| {
+            let i = *i;
+
+            if field.get_cells().get(i).map(Cell::is_markable).unwrap_or(false) {
+                return Some(i);
+            } else {
+                return None;
+            }
+        }).collect();
     }
 
     fn discover(&mut self, field: &mut Field) {

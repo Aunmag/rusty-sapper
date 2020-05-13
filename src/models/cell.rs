@@ -18,6 +18,10 @@ impl Cell {
         return self.mines_around.is_some();
     }
 
+    pub fn is_markable(&self) -> bool {
+        return !self.is_discovered() && !self.is_exploded;
+    }
+
     pub fn get_mark(&self, is_marked: bool) -> CellMark {
         let symbol;
         let mut foreground = ColorAttribute::Default;
