@@ -1,7 +1,7 @@
-use crate::models::ui::button::Button;
-use crate::models::ui::input_number::InputNumber;
-use crate::models::ui::Element;
-use crate::models::ui::Event;
+use crate::ui::button::Button;
+use crate::ui::input_number::InputNumber;
+use crate::ui::Element;
+use crate::ui::Event;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;

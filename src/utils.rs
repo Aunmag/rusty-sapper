@@ -1,4 +1,4 @@
-use rand::prelude::*; // TODO: Learn more about imports cause this one looks strange
+use rand::prelude::*;
 use std::time::Duration;
 use std::time::SystemTime;
 

@@ -1,6 +1,6 @@
-use crate::models::field::Field;
-use crate::models::sapper::Sapper;
-use crate::models::sapper::SapperBehavior;
+use crate::field::Field;
+use crate::sapper::Sapper;
+use crate::sapper::SapperBehavior;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;

@@ -1,5 +1,5 @@
-use crate::models::ui::page::Page;
-use crate::models::ui::Event;
+use crate::ui::page::Page;
+use crate::ui::Event;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;

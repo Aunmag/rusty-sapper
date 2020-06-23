@@ -1,5 +1,5 @@
-use crate::models::cell::Cell;
-use crate::models::sapper::Sapper;
+use crate::cell::Cell;
+use crate::sapper::Sapper;
 use crate::utils;
 use rand::prelude::*;
 use std::collections::HashSet;
@@ -181,9 +181,7 @@ impl Field {
                 mark.background,
             )));
 
-            surface.add_change(Change::Attribute(AttributeChange::Reverse(
-                is_player_point,
-            )));
+            surface.add_change(Change::Attribute(AttributeChange::Reverse(is_player_point)));
 
             surface.add_change(format!("{}", mark.symbol));
 

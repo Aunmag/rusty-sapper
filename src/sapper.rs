@@ -1,5 +1,5 @@
-use crate::models::cell::Cell;
-use crate::models::field::Field;
+use crate::cell::Cell;
+use crate::field::Field;
 use crate::utils::Timer;
 use std::collections::HashSet;
 use std::time::Duration;
@@ -198,10 +198,14 @@ impl Sapper {
     fn toggle_mark(&mut self, field: &Field) {
         let i = self.position;
 
-        if !self.marks.remove(&i) {
-            if field.get_cells().get(i).map(Cell::is_markable).unwrap_or(false) {
-                self.marks.insert(i);
-            }
+        if !self.marks.remove(&i)
+            && field
+                .get_cells()
+                .get(i)
+                .map(Cell::is_markable)
+                .unwrap_or(false)
+        {
+            self.marks.insert(i);
         }
     }
 

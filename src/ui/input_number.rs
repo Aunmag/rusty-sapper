@@ -1,5 +1,5 @@
-use crate::models::ui::Element;
-use crate::models::ui::Event;
+use crate::ui::Element;
+use crate::ui::Event;
 use std::any::Any;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;

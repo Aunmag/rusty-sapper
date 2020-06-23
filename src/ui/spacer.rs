@@ -1,5 +1,5 @@
-use crate::models::ui::Element;
-use crate::models::ui::EMPTY_LABEL;
+use crate::ui::Element;
+use crate::ui::EMPTY_LABEL;
 use std::any::Any;
 
 pub struct Spacer {}

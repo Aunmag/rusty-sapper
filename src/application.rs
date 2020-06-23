@@ -1,11 +1,11 @@
-use crate::models::game::Game;
-use crate::models::ui::button::Button;
-use crate::models::ui::Event;
-use crate::models::ui::input_number::InputNumber;
-use crate::models::ui::menu::Menu;
-use crate::models::ui::page::Page;
-use crate::models::ui::spacer::Spacer;
-use crate::models::ui::text::Text;
+use crate::game::Game;
+use crate::ui::button::Button;
+use crate::ui::input_number::InputNumber;
+use crate::ui::menu::Menu;
+use crate::ui::page::Page;
+use crate::ui::spacer::Spacer;
+use crate::ui::text::Text;
+use crate::ui::Event;
 use std::time::Duration;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -60,7 +60,7 @@ impl Application {
             is_running: false,
             is_menu: true,
             screen_update: ScreenUpdate::Full,
-        }
+        };
     }
 
     fn init_menu() -> Menu {
@@ -172,7 +172,10 @@ impl Application {
                 Ok(input) => {
                     let mut do_break = false;
 
-                    if let Some(InputEvent::Key(KeyEvent {key: KeyCode::Escape, ..})) = input {
+                    if let Some(InputEvent::Key(KeyEvent {
+                        key: KeyCode::Escape,
+                        ..
+                    })) = input {
                         if !self.is_menu || (self.menu.is_on_base_page() && self.game.is_some()) {
                             self.toggle_menu();
                             do_break = true;
