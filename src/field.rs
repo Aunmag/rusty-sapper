@@ -56,19 +56,20 @@ impl Field {
         self.mines.clear();
     }
 
-    pub fn discover(&mut self, position: usize) -> bool {
+    pub fn discover(&mut self, position: usize) -> DiscoveryResult {
         if self.mines.is_empty() {
             self.generate_mines(position);
         }
 
-        if self.mines.remove(&position) {
-            self.cells[position].is_exploded = true;
-            return false;
-        }
+        let cell = &mut self.cells[position];
 
-        let cell = &self.cells[position];
-
-        if !cell.is_discovered() {
+        if cell.is_exploded || cell.is_discovered() {
+            return DiscoveryResult::AlreadyDiscovered;
+        } else if self.mines.contains(&position) {
+            // TODO: Probably I should delete the mine here too
+            cell.is_exploded = true;
+            return DiscoveryResult::Failure;
+        } else {
             let near_positions = self.around(position, false);
             let mut mines_around = 0;
 
@@ -86,9 +87,9 @@ impl Field {
                     self.discover(*position_near);
                 }
             }
-        }
 
-        return true;
+            return DiscoveryResult::Success;
+        }
     }
 
     pub fn around(&self, center: usize, include_center: bool) -> Vec<usize> {
@@ -225,4 +226,10 @@ impl Field {
     pub fn get_cells_undiscovered_count(&self) -> usize {
         return self.get_cells_count() - self.get_mines_count() - self.cells_discovered_count;
     }
+}
+
+pub enum DiscoveryResult {
+    Success,
+    Failure,
+    AlreadyDiscovered,
 }

@@ -1,4 +1,5 @@
 use crate::cell::Cell;
+use crate::field::DiscoveryResult;
 use crate::field::Field;
 use crate::utils::Timer;
 use std::collections::HashSet;
@@ -223,10 +224,14 @@ impl Sapper {
 
     fn discover(&mut self, field: &mut Field) {
         if !self.has_marked(self.position) {
-            if field.discover(self.position) {
-                self.score += 1;
-            } else {
-                self.is_alive = false;
+            match field.discover(self.position) {
+                DiscoveryResult::Success => {
+                    self.score += 1;
+                }
+                DiscoveryResult::Failure => {
+                    self.is_alive = false;
+                }
+                DiscoveryResult::AlreadyDiscovered => {}
             }
         }
     }
