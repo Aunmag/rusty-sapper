@@ -1,5 +1,6 @@
 use crate::cell::Cell;
-use crate::field::DiscoveryResult;
+use crate::event::EventData;
+use crate::event::EventManager;
 use crate::field::Field;
 use crate::utils::Timer;
 use std::collections::HashSet;
@@ -9,20 +10,24 @@ use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
 
 const NAME_PLAYER: &'static str = "YOU";
+const NAME_REMOTE: &'static str = "NET";
 const NAME_BOT: &'static str = "BOT";
 
 pub enum SapperBehavior {
     Player,
+    Remote,
     Bot,
 }
 
 pub struct Sapper {
-    position: usize,
-    is_alive: bool,
-    behavior: SapperBehavior,
+    id: u8,
+    pub position: usize,
+    pub is_alive: bool,
+    pub behavior: SapperBehavior,
     marks: HashSet<usize>,
     timer: Timer,
-    score: u16,
+    pub score: u16,
+    events: EventManager,
 }
 
 struct BotTask {
@@ -31,14 +36,16 @@ struct BotTask {
 }
 
 impl Sapper {
-    pub fn new(behavior: SapperBehavior, position: usize, reaction: f64) -> Sapper {
+    pub fn new(id: u8, behavior: SapperBehavior, position: usize, reaction: f64) -> Sapper {
         return Sapper {
+            id,
             position,
             is_alive: true,
             behavior,
             marks: HashSet::new(),
             timer: Timer::new(Duration::from_secs_f64(reaction)),
             score: 0,
+            events: EventManager::new(),
         };
     }
 
@@ -55,6 +62,7 @@ impl Sapper {
                     self.update_as_player(field, input);
                 }
             }
+            SapperBehavior::Remote => {}
             SapperBehavior::Bot => {
                 self.update_as_bot(field);
             }
@@ -193,6 +201,14 @@ impl Sapper {
     fn shift_position(&mut self, x: i32, y: i32, field: &Field) {
         if let Some(position) = field.move_position(self.position, x, y) {
             self.position = position;
+            self.events.fire(
+                EventData::SapperMove {
+                    id: self.id,
+                    position: self.position as u16,
+                },
+                None,
+                None,
+            );
         }
     }
 
@@ -222,17 +238,21 @@ impl Sapper {
         }).collect();
     }
 
-    fn discover(&mut self, field: &mut Field) {
-        if !self.has_marked(self.position) {
-            match field.discover(self.position) {
-                DiscoveryResult::Success => {
-                    self.score += 1;
-                }
-                DiscoveryResult::Failure => {
-                    self.is_alive = false;
-                }
-                DiscoveryResult::AlreadyDiscovered => {}
-            }
+    pub fn discover(&mut self, field: &mut Field) {
+        let can_discover = field.get_cells()
+            .get(self.position)
+            .map(|c| !c.is_discovered() && !c.is_exploded)
+            .unwrap_or(false);
+
+        if can_discover && !self.has_marked(self.position) {
+            self.events.fire(
+                EventData::SapperDiscover {
+                    id: self.id,
+                    position: self.position as u16,
+                },
+                None,
+                None,
+            );
         }
     }
 
@@ -248,6 +268,10 @@ impl Sapper {
         }
     }
 
+    pub fn get_id(&self) -> u8 {
+        return self.id;
+    }
+
     pub fn is_alive(&self) -> bool {
         return self.is_alive;
     }
@@ -259,6 +283,7 @@ impl Sapper {
     pub fn get_name(&self) -> &'static str {
         return match self.behavior {
             SapperBehavior::Player => NAME_PLAYER,
+            SapperBehavior::Remote => NAME_REMOTE,
             SapperBehavior::Bot => NAME_BOT,
         };
     }
@@ -269,5 +294,9 @@ impl Sapper {
 
     pub fn get_score(&self) -> u16 {
         return self.score;
+    }
+
+    pub fn get_events_mut(&mut self) -> &mut EventManager {
+        return &mut self.events;
     }
 }

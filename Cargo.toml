@@ -5,5 +5,10 @@ authors = ["Aunmag <aunmag@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+async-std = "1.5"
+bincode = "1.2.1"
+futures = "0.3"
 rand = "0.7"
+serde = { version = "1.0", features = ["derive"] }
 termwiz = "0.6.0"
+tokio = { version = "0.2", features = ["sync", "tcp"] }

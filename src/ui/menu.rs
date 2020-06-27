@@ -1,5 +1,8 @@
-use crate::ui::page::Page;
+use crate::ui::button::Button;
 use crate::ui::Event;
+use crate::ui::page::Page;
+use crate::ui::spacer::Spacer;
+use crate::ui::text::Text;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
@@ -59,13 +62,35 @@ impl Menu {
         }
     }
 
+    pub fn show_message(&mut self, message: String, label: &'static str, button: &'static str) {
+        let mut page = Page::new(label);
+        page.is_temporary = true;
+        page.elements.push(Box::new(Text::new(format!("{}", message))));
+        page.elements.push(Box::new(Spacer::new()));
+        page.elements.push(Box::new(Button::new(button, true)));
+        page.reset_cursor();
+        self.add(page);
+        self.open(label);
+    }
+
     pub fn back(&mut self) {
         if !self.pages_history.is_empty() {
+            let mut to_remove = false;
+
             if let Some(current) = self.get_page_current_mut() {
-                current.reset_cursor();
+                if current.is_temporary {
+                    to_remove = true;
+                } else {
+                    current.reset_cursor();
+                }
             }
 
-            self.pages_history.pop();
+            if let Some(index) = self.pages_history.pop() {
+                if to_remove {
+                    self.pages.remove(index);
+                }
+            }
+
             self.events.push(Event::MenuChanged);
         }
     }

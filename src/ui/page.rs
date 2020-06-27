@@ -1,5 +1,6 @@
 use crate::ui::button::Button;
 use crate::ui::input_number::InputNumber;
+use crate::ui::input_text::InputText;
 use crate::ui::Element;
 use crate::ui::Event;
 use termwiz::cell::AttributeChange;
@@ -17,6 +18,7 @@ pub struct Page {
     pub label: &'static str,
     pub elements: Vec<Box<dyn Element>>,
     pub cursor: usize,
+    pub is_temporary: bool,
     events: Vec<Event>,
 }
 
@@ -26,6 +28,7 @@ impl Page {
             label,
             elements: Vec::new(),
             cursor: 0,
+            is_temporary: false,
             events: Vec::new(),
         };
     }
@@ -159,6 +162,13 @@ impl Page {
         return self
             .fetch_element_mut(label)
             .and_then(|e| e.as_any().downcast_mut::<InputNumber>());
+    }
+
+    // TODO: Avoid WET code
+    pub fn fetch_input_text_mut(&mut self, label: &str) -> Option<&mut InputText> {
+        return self
+            .fetch_element_mut(label)
+            .and_then(|e| e.as_any().downcast_mut::<InputText>());
     }
 
     // TODO: Avoid WET code

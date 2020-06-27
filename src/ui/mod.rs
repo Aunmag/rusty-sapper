@@ -1,5 +1,6 @@
 pub mod button;
 pub mod input_number;
+pub mod input_text;
 pub mod menu;
 pub mod page;
 pub mod spacer;

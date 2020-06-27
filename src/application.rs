@@ -1,11 +1,15 @@
 use crate::game::Game;
 use crate::ui::button::Button;
 use crate::ui::input_number::InputNumber;
+use crate::ui::input_text::InputText;
 use crate::ui::menu::Menu;
 use crate::ui::page::Page;
 use crate::ui::spacer::Spacer;
 use crate::ui::text::Text;
 use crate::ui::Event;
+use crate::net::NetHandler;
+use crate::net::client::Client;
+use crate::net::server::Server;
 use std::time::Duration;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -18,12 +22,18 @@ use termwiz::surface::Position;
 use termwiz::terminal::buffered::BufferedTerminal;
 use termwiz::terminal::new_terminal;
 use termwiz::terminal::Terminal;
+use crate::field::Field;
+use crate::sapper::Sapper;
+use crate::sapper::SapperBehavior;
+use futures::executor::block_on;
 
 const MAIN: &'static str = "Main menu";
 const CONTINUE: &'static str = "Continue";
 const NEW_GAME: &'static str = "New game";
 const START: &'static str = "Start";
 const RESET: &'static str = "Reset";
+const JOIN_GAME: &'static str = "Join game";
+const JOIN: &'static str = "Join";
 const HELP: &'static str = "Help";
 const BACK: &'static str = "Back";
 const QUIT: &'static str = "Quit";
@@ -31,11 +41,17 @@ const FIELD_SIZE: &'static str = "Field size   ";
 const MINES_DENSITY: &'static str = "Mines density";
 const BOTS: &'static str = "Bots         ";
 const BOTS_REACTION: &'static str = "Bots reaction";
+const SERVER_IP: &'static str = "Server IP    ";
+const SERVER_PORT: &'static str = "Server port  ";
+const ERROR: &'static str = "Error";
+const DISCONNECTED: &'static str = "Disconnected";
 
-const DEFAULT_FILED_SIZE: usize = 24;
+const DEFAULT_FILED_SIZE: usize = 8;
 const DEFAULT_MINES_DENSITY: f64 = 0.2;
-const DEFAULT_BOTS: u8 = 1;
+const DEFAULT_BOTS: u8 = 0;
 const DEFAULT_BOTS_REACTION: f64 = 1.0;
+const DEFAULT_SERVER_IP: &str = "127.0.0.1";
+const DEFAULT_SERVER_PORT: &str = "6000";
 
 #[derive(PartialEq)]
 pub enum ScreenUpdate {
@@ -46,7 +62,8 @@ pub enum ScreenUpdate {
 
 pub struct Application {
     menu: Menu,
-    game: Option<Game>,
+    server: Option<Server>,
+    client: Option<Client>,
     is_running: bool,
     is_menu: bool,
     screen_update: ScreenUpdate,
@@ -56,7 +73,8 @@ impl Application {
     pub fn new() -> Self {
         return Application {
             menu: Self::init_menu(),
-            game: None,
+            server: None,
+            client: None,
             is_running: false,
             is_menu: true,
             screen_update: ScreenUpdate::Full,
@@ -69,6 +87,7 @@ impl Application {
         let mut page_main = Page::new(MAIN);
         page_main.elements.push(Box::new(Button::new(CONTINUE, false)));
         page_main.elements.push(Box::new(Button::new(NEW_GAME, true)));
+        page_main.elements.push(Box::new(Button::new(JOIN_GAME, true)));
         page_main.elements.push(Box::new(Button::new(HELP, true)));
         page_main.elements.push(Box::new(Button::new(QUIT, true)));
         page_main.reset_cursor();
@@ -112,6 +131,17 @@ impl Application {
             Some(&"The time in seconds for a bot to make a move."),
         )));
 
+        let mut server_ip = InputText::new(
+            SERVER_IP,
+            Some(&"IPv4 or IPv6 address."), // TODO: Verify
+        );
+        server_ip.value = DEFAULT_SERVER_IP.to_string();
+
+        let mut server_port = InputText::new(SERVER_PORT, None);
+        server_port.value = DEFAULT_SERVER_PORT.to_string();
+
+        new_game.elements.push(Box::new(server_ip));
+        new_game.elements.push(Box::new(server_port));
         new_game.elements.push(Box::new(Spacer::new()));
         new_game.elements.push(Box::new(Button::new(START, true)));
         new_game.elements.push(Box::new(Button::new(RESET, true)));
@@ -133,6 +163,25 @@ impl Application {
         help.reset_cursor();
         menu.add(help);
 
+        let mut join = Page::new(JOIN_GAME);
+
+        let mut server_ip = InputText::new(
+            SERVER_IP,
+            Some(&"IPv4 or IPv6 address."), // TODO: Verify
+        );
+        server_ip.value = DEFAULT_SERVER_IP.to_string();
+
+        let mut server_port = InputText::new(SERVER_PORT, None);
+        server_port.value = DEFAULT_SERVER_PORT.to_string();
+
+        join.elements.push(Box::new(server_ip));
+        join.elements.push(Box::new(server_port));
+        join.elements.push(Box::new(Spacer::new()));
+        join.elements.push(Box::new(Button::new(JOIN, true)));
+        join.elements.push(Box::new(Button::new(BACK, true)));
+        join.reset_cursor();
+        menu.add(join);
+
         return menu;
     }
 
@@ -153,8 +202,12 @@ impl Application {
                 if self.is_menu {
                     terminal.draw_from_screen(&self.menu.render(), 0, 0);
                 } else {
-                    if let Some(game) = &self.game {
-                        terminal.draw_from_screen(&game.render(), 0, 0);
+                    if let Some(client) = self.client.as_ref() {
+                        terminal.draw_from_screen(
+                            &client.game.render(),
+                            0,
+                            0,
+                        );
                     }
                 }
 
@@ -176,7 +229,7 @@ impl Application {
                         key: KeyCode::Escape,
                         ..
                     })) = input {
-                        if !self.is_menu || (self.menu.is_on_base_page() && self.game.is_some()) {
+                        if !self.is_menu || (self.menu.is_on_base_page() && self.client.is_some()) {
                             self.toggle_menu();
                             do_break = true;
                         }
@@ -202,13 +255,19 @@ impl Application {
                                             self.menu.open(NEW_GAME);
                                         }
                                         Event::ButtonPressed(START) => {
-                                            self.start_new_game();
+                                            self.start_new_game_safely(true);
+                                        }
+                                        Event::ButtonPressed(JOIN) => {
+                                            self.start_new_game_safely(false);
                                         }
                                         Event::ButtonPressed(RESET) => {
                                             self.reset_settings();
                                         }
                                         Event::ButtonPressed(BACK) => {
                                             self.menu.back();
+                                        }
+                                        Event::ButtonPressed(JOIN_GAME) => {
+                                            self.menu.open(JOIN_GAME);
                                         }
                                         Event::ButtonPressed(HELP) => {
                                             self.menu.open(HELP);
@@ -227,7 +286,30 @@ impl Application {
                                 }
                             }
                         } else {
-                            self.game.as_mut().unwrap().update(input.as_ref());
+                            let mut do_stop = false;
+
+                            if let Some(server) = self.server.as_mut() {
+                                server.update(None);
+
+                                if let Some(error) = server.error.take() {
+                                    self.menu.show_message(error, ERROR, BACK);
+                                    do_stop = true;
+                                }
+                            }
+
+                            if let Some(client) = self.client.as_mut() {
+                                client.update(input.as_ref());
+
+                                if let Some(error) = client.error.take() {
+                                    self.menu.show_message(error, DISCONNECTED, BACK);
+                                    do_stop = true;
+                                }
+                            }
+
+                            if do_stop {
+                                self.stop_game();
+                            }
+
                             self.set_screen_update(ScreenUpdate::Partial);
                         }
                     }
@@ -243,11 +325,14 @@ impl Application {
         terminal.flush().unwrap();
     }
 
-    fn start_new_game(&mut self) {
+    fn start_new_game(&mut self, is_host: bool) -> Result<(), String> {
+        self.stop_game();
+
         let mut field_size = DEFAULT_FILED_SIZE;
         let mut mines_density = DEFAULT_MINES_DENSITY;
         let mut bots = DEFAULT_BOTS;
         let mut bots_reaction = DEFAULT_BOTS_REACTION;
+        let mut address = "".to_string();
 
         if let Some(page) = self.menu.fetch_page_mut(NEW_GAME) {
             if let Some(v) = page.fetch_input_number_mut(FIELD_SIZE) {
@@ -267,15 +352,65 @@ impl Application {
             }
         }
 
+        if let Some(page) = self.menu.get_page_current_mut() {
+            if let Some(v) = page.fetch_input_text_mut(SERVER_IP) {
+                address = v.value.clone();
+            }
+        }
+
+        if let Some(page) = self.menu.get_page_current_mut() {
+            if let Some(v) = page.fetch_input_text_mut(SERVER_PORT) {
+                address = format!("{}:{}", address, v.value.clone());
+            }
+        }
+
+        let address = address.parse()
+            .map_err(|e| format!("{}", e))
+            ?;
+
+        if is_host {
+            let field = Field::new(field_size, mines_density);
+
+            let mut sappers = Vec::with_capacity(bots as usize + 1);
+
+            for i in 0..bots {
+                sappers.push(Sapper::new(
+                    i,
+                    SapperBehavior::Bot,
+                    field.generate_random_position(),
+                    bots_reaction,
+                ));
+            }
+
+            self.server = Some(block_on(Server::new(
+                address,
+                Game::new(field, sappers),
+            ))?);
+        }
+
+        self.client = None;
+        self.client = Some(block_on(Client::new(address))?);
+
         if let Some(page) = self.menu.fetch_page_mut(MAIN) {
             if let Some(button) = page.fetch_button_mut(CONTINUE) {
                 button.is_active = true;
             }
         }
 
-        self.game = Some(Game::new(field_size, mines_density, bots, bots_reaction));
-        self.menu.back();
-        self.toggle_menu();
+        return Ok(());
+    }
+
+    fn start_new_game_safely(&mut self, is_host: bool) {
+        match self.start_new_game(is_host) {
+            Ok(()) => {
+                self.menu.back();
+                self.toggle_menu();
+            }
+            Err(error) => {
+                self.stop_game();
+                self.menu.show_message(format!("{}", error), ERROR, BACK);
+            }
+        }
     }
 
     fn reset_settings(&mut self) {
@@ -296,12 +431,20 @@ impl Application {
                 v.value = DEFAULT_BOTS_REACTION as f64;
             }
 
+            if let Some(v) = page.fetch_input_text_mut(SERVER_IP) {
+                v.value = DEFAULT_SERVER_IP.to_string();
+            }
+
+            if let Some(v) = page.fetch_input_text_mut(SERVER_PORT) {
+                v.value = DEFAULT_SERVER_PORT.to_string();
+            }
+
             self.set_screen_update(ScreenUpdate::Partial);
         }
     }
 
     fn toggle_menu(&mut self) {
-        if !self.is_menu || self.game.is_some() {
+        if !self.is_menu || self.client.is_some() {
             self.is_menu = !self.is_menu;
 
             if self.is_menu {
@@ -316,6 +459,12 @@ impl Application {
 
     fn stop(&mut self) {
         self.is_running = false;
+    }
+
+    fn stop_game(&mut self) {
+        self.client = None;
+        self.server = None;
+        self.toggle_menu();
     }
 
     fn set_screen_update(&mut self, screen_update: ScreenUpdate) {

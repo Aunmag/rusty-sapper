@@ -1,4 +1,6 @@
 use crate::cell::Cell;
+use crate::event::EventData;
+use crate::event::EventManager;
 use crate::sapper::Sapper;
 use crate::utils;
 use rand::prelude::*;
@@ -56,7 +58,11 @@ impl Field {
         self.mines.clear();
     }
 
-    pub fn discover(&mut self, position: usize) -> DiscoveryResult {
+    pub fn discover(
+        &mut self,
+        position: usize,
+        events: &mut EventManager,
+    ) -> DiscoveryResult {
         if self.mines.is_empty() {
             self.generate_mines(position);
         }
@@ -68,6 +74,15 @@ impl Field {
         } else if self.mines.contains(&position) {
             // TODO: Probably I should delete the mine here too
             cell.is_exploded = true;
+
+            events.fire(
+                EventData::CellExplode {
+                    position: position as u16,
+                },
+                None,
+                None,
+            );
+
             return DiscoveryResult::Failure;
         } else {
             let near_positions = self.around(position, false);
@@ -82,9 +97,18 @@ impl Field {
             self.cells[position].mines_around = Some(mines_around);
             self.cells_discovered_count += 1;
 
+            events.fire(
+                EventData::CellDiscover {
+                    position: position as u16,
+                    mines_around: mines_around,
+                },
+                None,
+                None,
+            );
+
             if mines_around == 0 {
                 for position_near in near_positions.iter() {
-                    self.discover(*position_near);
+                    self.discover(*position_near, events);
                 }
             }
 
@@ -207,8 +231,16 @@ impl Field {
         return self.get_cells_undiscovered_count() == 0;
     }
 
+    pub fn get_size(&self) -> usize {
+        return self.size;
+    }
+
     pub fn get_cells(&self) -> &Vec<Cell> {
         return &self.cells;
+    }
+
+    pub fn get_cells_mut(&mut self) -> &mut Vec<Cell> {
+        return &mut self.cells;
     }
 
     pub fn get_mines_count(&self) -> usize {

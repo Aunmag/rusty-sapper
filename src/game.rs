@@ -1,6 +1,7 @@
+use crate::event::EventManager;
+use crate::event::Event;
 use crate::field::Field;
 use crate::sapper::Sapper;
-use crate::sapper::SapperBehavior;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
@@ -13,33 +14,21 @@ const STATISTICS_WIDTH: usize = 16;
 pub struct Game {
     pub field: Field,
     pub sappers: Vec<Sapper>,
+    pub events: EventManager,
 }
 
 impl Game {
-    pub fn new(field_size: usize, mines_density: f64, bots: u8, bots_reaction: f64) -> Self {
-        let field = Field::new(field_size, mines_density);
-
-        let mut sappers = Vec::with_capacity(bots as usize + 1);
-
-        sappers.push(Sapper::new(
-            SapperBehavior::Player,
-            field.generate_random_position(),
-            0.0,
-        ));
-
-        for _ in 0..bots {
-            sappers.push(Sapper::new(
-                SapperBehavior::Bot,
-                field.generate_random_position(),
-                bots_reaction,
-            ));
-        }
-
-        return Game { field, sappers };
+    pub fn new(field: Field, sappers: Vec<Sapper>) -> Game {
+        return Game {
+            field,
+            sappers,
+            events: EventManager::new(),
+        };
     }
 
-    pub fn update(&mut self, input: Option<&InputEvent>) {
+    pub fn update(&mut self, input: Option<&InputEvent>) -> Vec<Event> {
         let mut explode_mines = !self.sappers.is_empty();
+        let mut local_events = Vec::new();
 
         if !self.field.is_cleaned() {
             for sapper in self.sappers.iter_mut() {
@@ -48,12 +37,26 @@ impl Game {
                 if explode_mines && sapper.is_alive() {
                     explode_mines = false;
                 }
+
+                let mut events = sapper.get_events_mut().pull();
+
+                while let Some(event) = events.pop() {
+                    local_events.push(event.clone()); // TODO: Optimize
+
+                    self.events.fire(
+                        event.data,
+                        None,
+                        None,
+                    );
+                }
             }
         }
 
         if explode_mines {
             self.field.explode_mines();
         }
+
+        return local_events;
     }
 
     pub fn render(&self) -> Surface {
@@ -133,6 +136,16 @@ impl Game {
         });
 
         return sappers;
+    }
+
+    pub fn get_sapper_mut(&mut self, id: u8) -> Option<&mut Sapper> {
+        for sapper in self.sappers.iter_mut() {
+            if sapper.get_id() == id {
+                return Some(sapper);
+            }
+        }
+
+        return None;
     }
 
     // TODO: Try no to use since it is slow
