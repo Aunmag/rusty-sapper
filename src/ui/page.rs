@@ -24,7 +24,7 @@ pub struct Page {
 
 impl Page {
     pub fn new(label: &'static str) -> Self {
-        return Page {
+        return Self {
             label,
             elements: Vec::new(),
             cursor: 0,
@@ -104,8 +104,7 @@ impl Page {
         if !self
             .elements
             .get(self.cursor)
-            .map(|c| c.is_active() && c.is_selectable())
-            .unwrap_or(false)
+            .map_or(false, |c| c.is_active() && c.is_selectable())
         {
             self.move_cursor(true);
         }
@@ -128,8 +127,7 @@ impl Page {
             if self
                 .elements
                 .get(cursor)
-                .map(|c| c.is_selectable())
-                .unwrap_or(false)
+                .map_or(false, |c| c.is_selectable())
             {
                 self.cursor = cursor;
                 self.events.push(Event::PageChanged);

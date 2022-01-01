@@ -15,8 +15,8 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new() -> Self {
-        return Menu {
+    pub const fn new() -> Self {
+        return Self {
             pages: Vec::new(),
             pages_history: Vec::new(),
             events: Vec::new(),
@@ -41,8 +41,7 @@ impl Menu {
     pub fn render(&self) -> Surface {
         return self
             .get_page_current()
-            .map(|p| p.render())
-            .unwrap_or_else(|| Surface::new(1, 1));
+            .map_or_else(|| Surface::new(1, 1), Page::render);
     }
 
     pub fn add(&mut self, page: Page) {
@@ -65,7 +64,7 @@ impl Menu {
     pub fn show_message(&mut self, message: String, label: &'static str, button: &'static str) {
         let mut page = Page::new(label);
         page.is_temporary = true;
-        page.elements.push(Box::new(Text::new(format!("{}", message))));
+        page.elements.push(Box::new(Text::new(message)));
         page.elements.push(Box::new(Spacer::new()));
         page.elements.push(Box::new(Button::new(button, true)));
         page.reset_cursor();
@@ -115,15 +114,15 @@ impl Menu {
     }
 
     pub fn is_on_base_page(&self) -> bool {
-        return self.pages_history.len() == 0;
+        return self.pages_history.is_empty();
     }
 
     pub fn pop_event(&mut self) -> Option<Event> {
         if self.events.is_empty() {
-            for page in self.pages.iter_mut() {
+            for page in &mut self.pages {
                 page.pull_events_into(&mut self.events);
 
-                for element in page.elements.iter_mut() {
+                for element in &mut page.elements {
                     element.pull_events_into(&mut self.events);
                 }
             }

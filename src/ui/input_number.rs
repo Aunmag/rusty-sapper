@@ -5,7 +5,7 @@ use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
 
-const TOOLTIP: &'static str = "Use left and right arrow keys to change the value.";
+const TOOLTIP: &str = "Use left and right arrow keys to change the value.";
 
 pub struct InputNumber {
     pub label: &'static str,
@@ -18,7 +18,7 @@ pub struct InputNumber {
 }
 
 impl InputNumber {
-    pub fn new(
+    pub const fn new(
         label: &'static str,
         value: f64,
         min: f64,
@@ -26,7 +26,7 @@ impl InputNumber {
         step: f64,
         tooltip_extra: Option<&'static str>,
     ) -> Self {
-        return InputNumber {
+        return Self {
             label,
             value,
             min,

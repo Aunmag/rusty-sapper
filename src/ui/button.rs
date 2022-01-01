@@ -12,8 +12,8 @@ pub struct Button {
 }
 
 impl Button {
-    pub fn new(label: &'static str, is_active: bool) -> Self {
-        return Button {
+    pub const fn new(label: &'static str, is_active: bool) -> Self {
+        return Self {
             label,
             is_active,
             events: Vec::new(),

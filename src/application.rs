@@ -26,27 +26,28 @@ use crate::field::Field;
 use crate::sapper::Sapper;
 use crate::sapper::SapperBehavior;
 use futures::executor::block_on;
+use crate::utils;
 
-const MAIN: &'static str = "Main menu";
-const CONTINUE: &'static str = "Continue";
-const NEW_GAME: &'static str = "New game";
-const START: &'static str = "Start";
-const RESET: &'static str = "Reset";
-const JOIN_GAME: &'static str = "Join game";
-const JOIN: &'static str = "Join";
-const HELP: &'static str = "Help";
-const BACK: &'static str = "Back";
-const QUIT: &'static str = "Quit";
-const FIELD_SIZE: &'static str = "Field size   ";
-const MINES_DENSITY: &'static str = "Mines density";
-const BOTS: &'static str = "Bots         ";
-const BOTS_REACTION: &'static str = "Bots reaction";
-const SERVER_IP: &'static str = "Server IP    ";
-const SERVER_PORT: &'static str = "Server port  ";
-const ERROR: &'static str = "Error";
-const DISCONNECTED: &'static str = "Disconnected";
+const MAIN: &str = "Main menu";
+const CONTINUE: &str = "Continue";
+const NEW_GAME: &str = "New game";
+const START: &str = "Start";
+const RESET: &str = "Reset";
+const JOIN_GAME: &str = "Join game";
+const JOIN: &str = "Join";
+const HELP: &str = "Help";
+const BACK: &str = "Back";
+const QUIT: &str = "Quit";
+const FIELD_SIZE: &str = "Field size   ";
+const MINES_DENSITY: &str = "Mines density";
+const BOTS: &str = "Bots         ";
+const BOTS_REACTION: &str = "Bots reaction";
+const SERVER_IP: &str = "Server IP    ";
+const SERVER_PORT: &str = "Server port  ";
+const ERROR: &str = "Error";
+const DISCONNECTED: &str = "Disconnected";
 
-const DEFAULT_FILED_SIZE: usize = 8;
+const DEFAULT_FILED_SIZE: u8 = 8;
 const DEFAULT_MINES_DENSITY: f64 = 0.2;
 const DEFAULT_BOTS: u8 = 0;
 const DEFAULT_BOTS_REACTION: f64 = 1.0;
@@ -71,7 +72,7 @@ pub struct Application {
 
 impl Application {
     pub fn new() -> Self {
-        return Application {
+        return Self {
             menu: Self::init_menu(),
             server: None,
             client: None,
@@ -84,107 +85,116 @@ impl Application {
     fn init_menu() -> Menu {
         let mut menu = Menu::new();
 
-        let mut page_main = Page::new(MAIN);
-        page_main.elements.push(Box::new(Button::new(CONTINUE, false)));
-        page_main.elements.push(Box::new(Button::new(NEW_GAME, true)));
-        page_main.elements.push(Box::new(Button::new(JOIN_GAME, true)));
-        page_main.elements.push(Box::new(Button::new(HELP, true)));
-        page_main.elements.push(Box::new(Button::new(QUIT, true)));
-        page_main.reset_cursor();
-        menu.add(page_main);
+        {
+            let mut page_main = Page::new(MAIN);
+            page_main.elements.push(Box::new(Button::new(CONTINUE, false)));
+            page_main.elements.push(Box::new(Button::new(NEW_GAME, true)));
+            page_main.elements.push(Box::new(Button::new(JOIN_GAME, true)));
+            page_main.elements.push(Box::new(Button::new(HELP, true)));
+            page_main.elements.push(Box::new(Button::new(QUIT, true)));
+            page_main.reset_cursor();
+            menu.add(page_main);
+        }
 
-        let mut new_game = Page::new(NEW_GAME);
+        {
+            let mut new_game = Page::new(NEW_GAME);
 
-        new_game.elements.push(Box::new(InputNumber::new(
-            FIELD_SIZE,
-            DEFAULT_FILED_SIZE as f64,
-            1.0,
-            32.0,
-            1.0,
-            None,
-        )));
+            new_game.elements.push(Box::new(InputNumber::new(
+                FIELD_SIZE,
+                f64::from(DEFAULT_FILED_SIZE),
+                1.0,
+                32.0,
+                1.0,
+                None,
+            )));
 
-        new_game.elements.push(Box::new(InputNumber::new(
-            MINES_DENSITY,
-            DEFAULT_MINES_DENSITY,
-            0.0,
-            1.0,
-            0.01,
-            Some(&"The probability that a cell will have a mine. 0 - no mines, 1 - every cell will be mined."),
-        )));
+            new_game.elements.push(Box::new(InputNumber::new(
+                MINES_DENSITY,
+                DEFAULT_MINES_DENSITY,
+                0.0,
+                1.0,
+                0.01,
+                Some("The probability that a cell will have a mine. 0 - no mines, 1 - every cell will be mined."),
+            )));
 
-        new_game.elements.push(Box::new(InputNumber::new(
-            BOTS,
-            DEFAULT_BOTS as f64,
-            0.0,
-            254.0,
-            1.0,
-            Some(&"The number of rival bots who will try to sweep mines as you too."),
-        )));
+            new_game.elements.push(Box::new(InputNumber::new(
+                BOTS,
+                f64::from(DEFAULT_BOTS),
+                0.0,
+                254.0,
+                1.0,
+                Some("The number of rival bots who will try to sweep mines as you too."),
+            )));
 
-        new_game.elements.push(Box::new(InputNumber::new(
-            BOTS_REACTION,
-            DEFAULT_BOTS_REACTION,
-            0.1,
-            5.0,
-            0.1,
-            Some(&"The time in seconds for a bot to make a move."),
-        )));
+            new_game.elements.push(Box::new(InputNumber::new(
+                BOTS_REACTION,
+                DEFAULT_BOTS_REACTION,
+                0.1,
+                5.0,
+                0.1,
+                Some("The time in seconds for a bot to make a move."),
+            )));
 
-        let mut server_ip = InputText::new(
-            SERVER_IP,
-            Some(&"IPv4 or IPv6 address."), // TODO: Verify
-        );
-        server_ip.value = DEFAULT_SERVER_IP.to_string();
+            let mut server_ip = InputText::new(
+                SERVER_IP,
+                Some("IPv4 or IPv6 address."), // TODO: Verify
+            );
+            server_ip.value = DEFAULT_SERVER_IP.to_owned();
 
-        let mut server_port = InputText::new(SERVER_PORT, None);
-        server_port.value = DEFAULT_SERVER_PORT.to_string();
+            let mut server_port = InputText::new(SERVER_PORT, None);
+            server_port.value = DEFAULT_SERVER_PORT.to_owned();
 
-        new_game.elements.push(Box::new(server_ip));
-        new_game.elements.push(Box::new(server_port));
-        new_game.elements.push(Box::new(Spacer::new()));
-        new_game.elements.push(Box::new(Button::new(START, true)));
-        new_game.elements.push(Box::new(Button::new(RESET, true)));
-        new_game.elements.push(Box::new(Button::new(BACK, true)));
-        new_game.reset_cursor();
-        menu.add(new_game);
+            new_game.elements.push(Box::new(server_ip));
+            new_game.elements.push(Box::new(server_port));
+            new_game.elements.push(Box::new(Spacer::new()));
+            new_game.elements.push(Box::new(Button::new(START, true)));
+            new_game.elements.push(Box::new(Button::new(RESET, true)));
+            new_game.elements.push(Box::new(Button::new(BACK, true)));
+            new_game.reset_cursor();
+            menu.add(new_game);
+        }
 
-        let help_text = "\
-            - Use the arrow keys to move around the field\r\n\
-            - Press `M` to mark a cell\r\n\
-            - Press `Space` to discover a cell\r\n\
-            - Press `Escape` to switch between the game and menu\
-            ".to_string();
+        {
+            let help_text = "\
+                - Use the arrow keys to move around the field\r\n\
+                - Press `M` to mark a cell\r\n\
+                - Press `Space` to discover a cell\r\n\
+                - Press `Escape` to switch between the game and menu\
+                ".to_owned();
 
-        let mut help = Page::new(HELP);
-        help.elements.push(Box::new(Text::new(help_text)));
-        help.elements.push(Box::new(Spacer::new()));
-        help.elements.push(Box::new(Button::new(BACK, true)));
-        help.reset_cursor();
-        menu.add(help);
+            let mut help = Page::new(HELP);
+            help.elements.push(Box::new(Text::new(help_text)));
+            help.elements.push(Box::new(Spacer::new()));
+            help.elements.push(Box::new(Button::new(BACK, true)));
+            help.reset_cursor();
+            menu.add(help);
+        }
 
-        let mut join = Page::new(JOIN_GAME);
+        {
+            let mut join = Page::new(JOIN_GAME);
 
-        let mut server_ip = InputText::new(
-            SERVER_IP,
-            Some(&"IPv4 or IPv6 address."), // TODO: Verify
-        );
-        server_ip.value = DEFAULT_SERVER_IP.to_string();
+            let mut server_ip = InputText::new(
+                SERVER_IP,
+                Some("IPv4 or IPv6 address."), // TODO: Verify
+            );
+            server_ip.value = DEFAULT_SERVER_IP.to_owned();
 
-        let mut server_port = InputText::new(SERVER_PORT, None);
-        server_port.value = DEFAULT_SERVER_PORT.to_string();
+            let mut server_port = InputText::new(SERVER_PORT, None);
+            server_port.value = DEFAULT_SERVER_PORT.to_owned();
 
-        join.elements.push(Box::new(server_ip));
-        join.elements.push(Box::new(server_port));
-        join.elements.push(Box::new(Spacer::new()));
-        join.elements.push(Box::new(Button::new(JOIN, true)));
-        join.elements.push(Box::new(Button::new(BACK, true)));
-        join.reset_cursor();
-        menu.add(join);
+            join.elements.push(Box::new(server_ip));
+            join.elements.push(Box::new(server_port));
+            join.elements.push(Box::new(Spacer::new()));
+            join.elements.push(Box::new(Button::new(JOIN, true)));
+            join.elements.push(Box::new(Button::new(BACK, true)));
+            join.reset_cursor();
+            menu.add(join);
+        }
 
         return menu;
     }
 
+    #[allow(clippy::too_many_lines)] // TODO: Resolve later
     pub fn run(&mut self) {
         let mut terminal = BufferedTerminal::new(new_terminal(Capabilities::new_from_env().unwrap()).unwrap()).unwrap();
 
@@ -201,14 +211,12 @@ impl Application {
             if self.screen_update == ScreenUpdate::Partial || self.screen_update == ScreenUpdate::Full {
                 if self.is_menu {
                     terminal.draw_from_screen(&self.menu.render(), 0, 0);
-                } else {
-                    if let Some(client) = self.client.as_ref() {
-                        terminal.draw_from_screen(
-                            &client.game.render(),
-                            0,
-                            0,
-                        );
-                    }
+                } else if let Some(client) = self.client.as_ref() {
+                    terminal.draw_from_screen(
+                        &client.game.render(),
+                        0,
+                        0,
+                    );
                 }
 
                 terminal.add_change(Change::CursorPosition {
@@ -332,11 +340,11 @@ impl Application {
         let mut mines_density = DEFAULT_MINES_DENSITY;
         let mut bots = DEFAULT_BOTS;
         let mut bots_reaction = DEFAULT_BOTS_REACTION;
-        let mut address = "".to_string();
+        let mut address = "".to_owned();
 
         if let Some(page) = self.menu.fetch_page_mut(NEW_GAME) {
             if let Some(v) = page.fetch_input_number_mut(FIELD_SIZE) {
-                field_size = v.value as usize;
+                field_size = utils::f64_to_u8_saturating_floor(v.value);
             }
 
             if let Some(v) = page.fetch_input_number_mut(MINES_DENSITY) {
@@ -344,7 +352,7 @@ impl Application {
             }
 
             if let Some(v) = page.fetch_input_number_mut(BOTS) {
-                bots = v.value as u8;
+                bots = utils::f64_to_u8_saturating_floor(v.value);
             }
 
             if let Some(v) = page.fetch_input_number_mut(BOTS_REACTION) {
@@ -371,7 +379,7 @@ impl Application {
         if is_host {
             let field = Field::new(field_size, mines_density);
 
-            let mut sappers = Vec::with_capacity(bots as usize + 1);
+            let mut sappers = Vec::with_capacity(usize::from(bots) + 1);
 
             for i in 0..bots {
                 sappers.push(Sapper::new(
@@ -408,7 +416,7 @@ impl Application {
             }
             Err(error) => {
                 self.stop_game();
-                self.menu.show_message(format!("{}", error), ERROR, BACK);
+                self.menu.show_message(error, ERROR, BACK);
             }
         }
     }
@@ -416,27 +424,27 @@ impl Application {
     fn reset_settings(&mut self) {
         if let Some(page) = self.menu.fetch_page_mut(NEW_GAME) {
             if let Some(v) = page.fetch_input_number_mut(FIELD_SIZE) {
-                v.value = DEFAULT_FILED_SIZE as f64;
+                v.value = f64::from(DEFAULT_FILED_SIZE);
             }
 
             if let Some(v) = page.fetch_input_number_mut(MINES_DENSITY) {
-                v.value = DEFAULT_MINES_DENSITY as f64;
+                v.value = DEFAULT_MINES_DENSITY;
             }
 
             if let Some(v) = page.fetch_input_number_mut(BOTS) {
-                v.value = DEFAULT_BOTS as f64;
+                v.value = f64::from(DEFAULT_BOTS);
             }
 
             if let Some(v) = page.fetch_input_number_mut(BOTS_REACTION) {
-                v.value = DEFAULT_BOTS_REACTION as f64;
+                v.value = DEFAULT_BOTS_REACTION;
             }
 
             if let Some(v) = page.fetch_input_text_mut(SERVER_IP) {
-                v.value = DEFAULT_SERVER_IP.to_string();
+                v.value = DEFAULT_SERVER_IP.to_owned();
             }
 
             if let Some(v) = page.fetch_input_text_mut(SERVER_PORT) {
-                v.value = DEFAULT_SERVER_PORT.to_string();
+                v.value = DEFAULT_SERVER_PORT.to_owned();
             }
 
             self.set_screen_update(ScreenUpdate::Partial);

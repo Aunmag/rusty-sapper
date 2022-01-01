@@ -9,7 +9,7 @@ pub mod text;
 use std::any::Any;
 use termwiz::input::InputEvent;
 
-pub const EMPTY_LABEL: &'static str = "";
+pub const EMPTY_LABEL: &str = "";
 
 pub enum Event {
     ButtonPressed(&'static str),
@@ -42,15 +42,15 @@ pub trait Element {
         let mut tooltip_full = None;
 
         if let Some(description) = self.get_tooltip_extra() {
-            tooltip_full = Some(description.to_string());
+            tooltip_full = Some(description.to_owned());
         }
 
         if let Some(tooltip) = self.get_tooltip() {
             if let Some(tooltip_full) = tooltip_full.as_mut() {
-                tooltip_full.push_str(" ");
+                tooltip_full.push(' ');
                 tooltip_full.push_str(tooltip);
             } else {
-                tooltip_full = Some(tooltip.to_string());
+                tooltip_full = Some(tooltip.to_owned());
             }
         }
 

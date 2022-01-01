@@ -20,6 +20,7 @@ use futures::pin_mut;
 use futures::select;
 use std::net::SocketAddr;
 use std::thread::JoinHandle;
+use std::convert::TryFrom;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::Receiver;
@@ -42,7 +43,7 @@ pub struct ServerClient {
 }
 
 impl Server {
-    pub async fn new(address: SocketAddr, game: Game) -> Result<Server, String> {
+    pub async fn new(address: SocketAddr, game: Game) -> Result<Self, String> {
         let (server_sender, runner_receiver) = mpsc::channel(CHANNELS_BUFFER_SIZE);
         let (runner_sender, server_receiver) = mpsc::channel(CHANNELS_BUFFER_SIZE);
 
@@ -52,12 +53,12 @@ impl Server {
             ?;
 
         let thread = std::thread::Builder::new()
-            .name("server".to_string())
-            .spawn(move || block_on(Server::run(listener, runner_sender, runner_receiver)))
+            .name("server".to_owned())
+            .spawn(move || block_on(Self::run(listener, runner_sender, runner_receiver)))
             .map_err(|e| format!("{}", e))
             ?;
 
-        return Ok(Server {
+        return Ok(Self {
             game,
             sender: server_sender,
             receiver: server_receiver,
@@ -67,6 +68,7 @@ impl Server {
         });
     }
 
+    #[allow(warnings)] // TODO: Resolve
     async fn run(listener: TcpListener, sender: Sender<Message>, receiver: Receiver<Message>) {
         let mut listener = listener;
         let mut sender = sender;
@@ -74,8 +76,8 @@ impl Server {
         let mut error = None;
 
         {
-            let connections_listening = Server::run_connections_listening(&mut listener, &mut sender).fuse();
-            let receiver_listening = Server::run_receiver_listening(&mut receiver).fuse();
+            let connections_listening = Self::run_connections_listening(&mut listener, &mut sender).fuse();
+            let receiver_listening = Self::run_receiver_listening(&mut receiver).fuse();
             pin_mut!(connections_listening, receiver_listening);
 
             select! {
@@ -135,7 +137,7 @@ impl Server {
                     let sender_clone = sender.clone();
 
                     std::thread::spawn(move || {
-                        block_on(Server::run_client_listening(address, stream, sender_clone))
+                        block_on(Self::run_client_listening(address, stream, sender_clone));
                     });
                 }
                 Err(error) => {
@@ -145,10 +147,8 @@ impl Server {
         }
     }
 
-    async fn run_client_listening(address: SocketAddr, stream: TcpStream, sender: Sender<Message>) {
+    async fn run_client_listening(address: SocketAddr, mut stream: TcpStream, mut sender: Sender<Message>) {
         // TODO: Find a way to gracefully terminate a client listening
-        let mut stream = stream;
-        let mut sender = sender;
 
         loop {
             let mut message = vec![0; EVENT_SIZE];
@@ -203,7 +203,7 @@ impl Server {
                     unreachable!();
                 }
                 None => {
-                    return Err(NO_SENDER.to_string());
+                    return Err(NO_SENDER.to_owned());
                 }
             }
         }
@@ -211,6 +211,7 @@ impl Server {
 }
 
 impl Drop for Server {
+    #[allow(clippy::let_underscore_drop)] // TODO: Resolve
     fn drop(&mut self) {
         let _ = block_on(self.sender.send(Message::Local(LocalMessage::Stop))); // TODO: Handle error
 
@@ -238,7 +239,7 @@ impl NetHandler for Server {
                     self.error = Some(error);
                 }
                 Err(TryRecvError::Closed) => {
-                    self.error = Some(NO_SENDER.to_string());
+                    self.error = Some(NO_SENDER.to_owned());
                 }
                 Err(TryRecvError::Empty) => {
                     break;
@@ -257,9 +258,9 @@ impl NetHandler for Server {
 
         clients = clients.into_iter().filter_map(|mut client| {
             if
-                event.target.map(|t| t == client.address).unwrap_or(true)
+                event.target.map_or(true, |t| t == client.address)
                 &&
-                event.source.map(|t| t != client.address).unwrap_or(true)
+                event.source.map_or(true, |t| t != client.address)
             {
                 utils::log(&format!(
                     "[SERVER] >> {:?} to {:?}",
@@ -278,7 +279,12 @@ impl NetHandler for Server {
     }
 
     fn on_sapper_connect(&mut self, address: SocketAddr) -> bool {
-        let new_sapper_id = self.game.sappers.len() as u8;
+        let new_sapper_id;
+
+        #[allow(clippy::as_conversions, clippy::cast_possible_truncation)] // TODO: Find a way to resolve
+        {
+            new_sapper_id = self.game.sappers.len() as u8;
+        }
 
         self.game.sappers.push(Sapper::new(
             new_sapper_id,
@@ -293,12 +299,12 @@ impl NetHandler for Server {
             Some(address),
         );
 
-        for sapper in self.game.sappers.iter() {
-            let mut target = None;
-
-            if sapper.get_id() != new_sapper_id {
-                target = Some(address);
-            }
+        for sapper in &self.game.sappers {
+            let target = if sapper.get_id() == new_sapper_id {
+                None
+            } else {
+                Some(address)
+            };
 
             if !sapper.is_alive {
                 self.game.events.fire(
@@ -314,7 +320,7 @@ impl NetHandler for Server {
                 self.game.events.fire(
                     EventData::SapperScore {
                         id: sapper.get_id(),
-                        score: sapper.score as u16,
+                        score: sapper.score,
                     },
                     None,
                     target,
@@ -324,18 +330,26 @@ impl NetHandler for Server {
             self.game.events.fire(
                 EventData::SapperSpawn {
                     id: sapper.get_id(),
-                    position: sapper.get_position() as u16,
+                    position: sapper.get_position(),
                 },
                 None,
                 target,
             );
         }
 
-        for (position, cell) in self.game.field.get_cells().iter().enumerate() {
+        for (i, cell) in self.game.field.get_cells().iter().enumerate() {
+            let position = match u16::try_from(i) {
+                Ok(position) => position,
+                Err(_) => {
+                    // TODO: Log error
+                    break;
+                },
+            };
+
             if let Some(mines_around) = cell.mines_around {
                 self.game.events.fire(
                     EventData::CellDiscover {
-                        position: position as u16,
+                        position,
                         mines_around,
                     },
                     None,
@@ -346,7 +360,7 @@ impl NetHandler for Server {
             if cell.is_exploded {
                 self.game.events.fire(
                     EventData::CellExplode {
-                        position: position as u16,
+                        position,
                     },
                     None,
                     Some(address),
@@ -356,7 +370,7 @@ impl NetHandler for Server {
 
         self.game.events.fire(
             EventData::FieldCreate {
-                size: self.game.field.get_size() as u8,
+                size: self.game.field.get_size(),
             },
             None,
             Some(address),
@@ -366,18 +380,18 @@ impl NetHandler for Server {
     }
 
     fn on_sapper_discover(&mut self, id: u8, position: u16) -> bool {
-        struct SapperData { id: u8, score: u16 };
+        struct SapperData { id: u8, score: u16 }
         let mut sapper_data = None;
 
         if let Some(sapper) = self.game.get_sapper_mut(id) {
             sapper_data = Some(SapperData {
                 id: sapper.get_id(),
-                score: sapper.score as u16,
+                score: sapper.score,
             });
         }
 
         if let Some(sapper_data) = sapper_data {
-            match self.game.field.discover(position as usize, &mut self.game.events) {
+            match self.game.field.discover(position, &mut self.game.events) {
                 DiscoveryResult::Success => {
                     self.game.events.fire(
                         EventData::SapperScore {

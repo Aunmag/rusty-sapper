@@ -46,7 +46,7 @@ impl EventData {
         return encoded;
     }
 
-    pub fn decode(data: &Vec<u8>) -> EventData {
+    pub fn decode(data: &[u8]) -> Self {
         let mut encoded = Vec::with_capacity(EVENT_SIZE);
 
         // Restore the 3 missing bytes which we took-off while encoding
@@ -69,7 +69,7 @@ pub struct EventManager {
 }
 
 impl EventManager {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         return Self {
             events: Vec::new(),
         };

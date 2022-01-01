@@ -18,8 +18,8 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(field: Field, sappers: Vec<Sapper>) -> Game {
-        return Game {
+    pub fn new(field: Field, sappers: Vec<Sapper>) -> Self {
+        return Self {
             field,
             sappers,
             events: EventManager::new(),
@@ -31,7 +31,7 @@ impl Game {
         let mut local_events = Vec::new();
 
         if !self.field.is_cleaned() {
-            for sapper in self.sappers.iter_mut() {
+            for sapper in &mut self.sappers {
                 sapper.update(&mut self.field, input);
 
                 if explode_mines && sapper.is_alive() {
@@ -78,14 +78,14 @@ impl Game {
 
     pub fn render_statistics(&self) -> Surface {
         let mut surface = Surface::new(STATISTICS_WIDTH, self.sappers.len() + 5);
-        let marks = self.get_player().map(|p| p.get_marks_count()).unwrap_or(0);
+        let marks = self.get_player().map_or(0, Sapper::get_marks_count);
 
         surface.add_change(format!(
             "     #GOT #REM  #CLS {:04} {:04}  #MNS {:04} {:04}                  #POS #SPR #SCR  ",
             self.field.get_cells_discovered_count(),
             self.field.get_cells_undiscovered_count(),
             marks,
-            self.field.get_mines_count() as i32 - marks as i32,
+            self.field.get_mines_count().saturating_sub(marks),
         ));
 
         for (i, sapper) in self.get_sappers_sorted_by_score().iter().enumerate() {
@@ -106,10 +106,10 @@ impl Game {
             }
 
             surface.add_change(format!(
-                "{:04}  {} {}",
+                "{:04}  {} {:04}",
                 i + 1,
                 sapper.get_name(),
-                format!("{:04}", sapper.get_score()),
+                sapper.get_score(),
             ));
 
             surface.add_change(Change::Attribute(AttributeChange::Foreground(
@@ -125,7 +125,7 @@ impl Game {
     pub fn get_sappers_sorted_by_score(&self) -> Vec<&Sapper> {
         let mut sappers = Vec::with_capacity(self.sappers.len());
 
-        for sapper in self.sappers.iter() {
+        for sapper in &self.sappers {
             sappers.push(sapper);
         }
 
@@ -139,7 +139,7 @@ impl Game {
     }
 
     pub fn get_sapper_mut(&mut self, id: u8) -> Option<&mut Sapper> {
-        for sapper in self.sappers.iter_mut() {
+        for sapper in &mut self.sappers {
             if sapper.get_id() == id {
                 return Some(sapper);
             }
@@ -150,7 +150,7 @@ impl Game {
 
     // TODO: Try no to use since it is slow
     pub fn get_player(&self) -> Option<&Sapper> {
-        for sapper in self.sappers.iter() {
+        for sapper in &self.sappers {
             if sapper.is_player() {
                 return Some(sapper);
             }

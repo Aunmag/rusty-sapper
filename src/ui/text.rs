@@ -7,8 +7,8 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(text: String) -> Self {
-        return Text { text };
+    pub const fn new(text: String) -> Self {
+        return Self { text };
     }
 }
 

@@ -5,14 +5,14 @@ use std::any::Any;
 pub struct Spacer {}
 
 impl Spacer {
-    pub fn new() -> Self {
-        return Spacer {};
+    pub const fn new() -> Self {
+        return Self {};
     }
 }
 
 impl Element for Spacer {
     fn render(&self) -> String {
-        return EMPTY_LABEL.to_string();
+        return EMPTY_LABEL.to_owned();
     }
 
     fn get_label(&self) -> &str {

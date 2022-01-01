@@ -9,7 +9,7 @@ use crate::net::server::ServerClient;
 use std::net::SocketAddr;
 use termwiz::input::InputEvent;
 
-pub const NO_SENDER: &'static str = &"Receiver's sender no longer exists.";
+pub const NO_SENDER: &str = "Receiver's sender no longer exists.";
 
 pub enum Message {
     // TODO: Maybe allow send encoded events
@@ -40,8 +40,8 @@ pub trait NetHandler {
         let mut suspended = Vec::new();
 
         while let Some(event) = self.get_events_mut().pop() {
-            if let Some(event) = self.on_event(event) {
-                suspended.push(event);
+            if let Some(unprocessed) = self.on_event(event) {
+                suspended.push(unprocessed);
             }
         }
 
@@ -117,7 +117,7 @@ pub trait NetHandler {
 
     fn on_sapper_move(&mut self, id: u8, position: u16) -> bool {
         if let Some(sapper) = self.get_game_mut().get_sapper_mut(id) {
-            sapper.position = position as usize;
+            sapper.position = position;
             return true;
         } else {
             return false;

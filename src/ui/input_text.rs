@@ -5,7 +5,7 @@ use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;
 
-const TOOLTIP: &'static str = "Type in some text. Press `Backspace` to remove \
+const TOOLTIP: &str = "Type in some text. Press `Backspace` to remove \
     the last letter. You can also pase text from clipboard.";
 
 pub struct InputText {
@@ -16,8 +16,8 @@ pub struct InputText {
 }
 
 impl InputText {
-    pub fn new(label: &'static str, tooltip_extra: Option<&'static str>) -> Self {
-        return InputText {
+    pub const fn new(label: &'static str, tooltip_extra: Option<&'static str>) -> Self {
+        return Self {
             label,
             value: String::new(),
             tooltip_extra,

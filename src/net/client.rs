@@ -35,7 +35,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new(address: SocketAddr) -> Result<Client, String> {
+    pub async fn new(address: SocketAddr) -> Result<Self, String> {
         let (client_sender, runner_receiver) = mpsc::channel(CHANNELS_BUFFER_SIZE);
         let (runner_sender, client_receiver) = mpsc::channel(CHANNELS_BUFFER_SIZE);
 
@@ -45,12 +45,12 @@ impl Client {
             ?;
 
         let thread = std::thread::Builder::new()
-            .name("client".to_string())
-            .spawn(move || block_on(Client::run(stream, runner_sender, runner_receiver)))
+            .name("client".to_owned())
+            .spawn(move || block_on(Self::run(stream, runner_sender, runner_receiver)))
             .map_err(|e| format!("{}", e))
             ?;
 
-        return Ok(Client {
+        return Ok(Self {
             game: Game::new(Field::new(0, 0.0), Vec::new()),
             sender: client_sender,
             receiver: client_receiver,
@@ -59,6 +59,7 @@ impl Client {
         });
     }
 
+    #[allow(warnings)] // TODO: Resolve
     async fn run(stream: TcpStream, sender: Sender<Message>, receiver: Receiver<Message>) {
         let mut stream_reading = stream;
         let mut stream_writing = stream_reading.clone(); // TODO: Avoid cloning
@@ -87,6 +88,7 @@ impl Client {
             }
         }
 
+        #[allow(clippy::let_underscore_drop)] // TODO: Resolve
         if let Some(error) = error {
             let _ = sender.send(Message::Local(LocalMessage::Error(error))).await; // TODO: Maybe handle result
         }
@@ -149,7 +151,7 @@ impl Client {
                     unreachable!();
                 }
                 None => {
-                    return Err(NO_SENDER.to_string());
+                    return Err(NO_SENDER.to_owned());
                 }
             }
         }
@@ -157,6 +159,7 @@ impl Client {
 }
 
 impl Drop for Client {
+    #[allow(clippy::let_underscore_drop)] // TODO: Resolve
     fn drop(&mut self) {
         let _ = block_on(self.sender.send(Message::Local(LocalMessage::Stop))); // TODO: Handle error
 
@@ -184,7 +187,7 @@ impl NetHandler for Client {
                     self.error = Some(error);
                 }
                 Err(TryRecvError::Closed) => {
-                    self.error = Some(NO_SENDER.to_string());
+                    self.error = Some(NO_SENDER.to_owned());
                 }
                 Err(TryRecvError::Empty) => {
                     break;
@@ -193,6 +196,7 @@ impl NetHandler for Client {
         }
     }
 
+    #[allow(clippy::let_underscore_drop)] // TODO: Resolve
     fn send(&mut self, event: Event) {
         let _ = block_on(self.sender.send(Message::Event(event))); // TODO: Handle error
     }
@@ -210,7 +214,7 @@ impl NetHandler for Client {
         self.game.sappers.push(Sapper::new(
             id,
             SapperBehavior::Remote,
-            position as usize,
+            position,
             0.0,
         ));
 
@@ -218,12 +222,12 @@ impl NetHandler for Client {
     }
 
     fn on_field_create(&mut self, size: u8) -> bool {
-        self.game.field = Field::new(size as usize, 0.0);
+        self.game.field = Field::new(size, 0.0);
         return true;
     }
 
     fn on_cell_discover(&mut self, position: u16, mines_around: u8) -> bool {
-        if let Some(cell) = self.game.field.get_cells_mut().get_mut(position as usize) {
+        if let Some(cell) = self.game.field.get_cell_mut(position) {
             cell.mines_around = Some(mines_around);
             return true;
         }
@@ -232,7 +236,7 @@ impl NetHandler for Client {
     }
 
     fn on_cell_explode(&mut self, position: u16) -> bool {
-        if let Some(cell) = self.game.field.get_cells_mut().get_mut(position as usize) {
+        if let Some(cell) = self.game.field.get_cell_mut(position) {
             cell.is_exploded = true;
             return true;
         }
