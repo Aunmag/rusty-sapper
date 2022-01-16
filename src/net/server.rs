@@ -20,7 +20,6 @@ use futures::pin_mut;
 use futures::select;
 use std::net::SocketAddr;
 use std::thread::JoinHandle;
-use std::convert::TryFrom;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::Receiver;

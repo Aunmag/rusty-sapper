@@ -5,7 +5,6 @@ use crate::field::Field;
 use crate::utils::Timer;
 use std::collections::HashSet;
 use std::time::Duration;
-use std::convert::TryFrom;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;

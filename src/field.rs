@@ -5,7 +5,6 @@ use crate::sapper::Sapper;
 use crate::utils;
 use rand::prelude::*;
 use std::collections::HashSet;
-use std::convert::TryFrom;
 use termwiz::cell::AttributeChange;
 use termwiz::color::AnsiColor;
 use termwiz::color::ColorAttribute;
