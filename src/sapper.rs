@@ -222,29 +222,30 @@ impl Sapper {
     fn toggle_mark(&mut self, field: &Field) {
         let i = self.position;
 
-        if !self.marks.remove(&i)
-            && field
-                .get_cell(i)
-                .map_or(false, Cell::is_markable)
-        {
+        if !self.marks.remove(&i) && field.get_cell(i).map_or(false, Cell::is_markable) {
             self.marks.insert(i);
         }
     }
 
     fn remove_useless_marks(&mut self, field: &Field) {
-        self.marks = self.marks.iter().filter_map(|i| {
-            let i = *i;
+        self.marks = self
+            .marks
+            .iter()
+            .filter_map(|i| {
+                let i = *i;
 
-            if field.get_cell(i).map_or(false, Cell::is_markable) {
-                return Some(i);
-            } else {
-                return None;
-            }
-        }).collect();
+                if field.get_cell(i).map_or(false, Cell::is_markable) {
+                    return Some(i);
+                } else {
+                    return None;
+                }
+            })
+            .collect();
     }
 
     pub fn discover(&mut self, field: &mut Field) {
-        let can_discover = field.get_cell(self.position)
+        let can_discover = field
+            .get_cell(self.position)
             .map_or(false, |c| !c.is_discovered() && !c.is_exploded);
 
         if can_discover && !self.has_marked(self.position) {

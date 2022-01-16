@@ -2,14 +2,14 @@ use crate::event::Event;
 use crate::event::EventData;
 use crate::event::EventManager;
 use crate::event::EVENT_SIZE;
-use crate::game::Game;
-use crate::sapper::Sapper;
-use crate::sapper::SapperBehavior;
 use crate::field::DiscoveryResult;
+use crate::game::Game;
 use crate::net::LocalMessage;
 use crate::net::Message;
 use crate::net::NetHandler;
 use crate::net::NO_SENDER;
+use crate::sapper::Sapper;
+use crate::sapper::SapperBehavior;
 use crate::utils;
 use async_std::net::TcpListener;
 use async_std::net::TcpStream;
@@ -48,14 +48,12 @@ impl Server {
 
         let listener = TcpListener::bind(address)
             .await
-            .map_err(|e| format!("{}", e))
-            ?;
+            .map_err(|e| format!("{}", e))?;
 
         let thread = std::thread::Builder::new()
             .name("server".to_owned())
             .spawn(move || block_on(Self::run(listener, runner_sender, runner_receiver)))
-            .map_err(|e| format!("{}", e))
-            ?;
+            .map_err(|e| format!("{}", e))?;
 
         return Ok(Self {
             game,
@@ -96,7 +94,9 @@ impl Server {
         }
 
         if let Some(error) = error {
-            let _ = sender.send(Message::Local(LocalMessage::Error(error))).await; // TODO: Maybe handle result
+            let _ = sender
+                .send(Message::Local(LocalMessage::Error(error)))
+                .await; // TODO: Maybe handle result
         }
 
         utils::log(&"[SERVER] Has terminated gracefully".to_string());
@@ -111,10 +111,13 @@ impl Server {
                 Ok((stream, address)) => {
                     utils::log(&format!("[SERVER] {} has connected", address));
 
-                    match sender.send(Message::Local(LocalMessage::Connection(ServerClient {
-                        stream: stream.clone(),
-                        address,
-                    }))).await {
+                    match sender
+                        .send(Message::Local(LocalMessage::Connection(ServerClient {
+                            stream: stream.clone(),
+                            address,
+                        })))
+                        .await
+                    {
                         Ok(()) => {}
                         Err(error) => {
                             return Err(format!("{}", error));
@@ -122,11 +125,14 @@ impl Server {
                     }
 
                     // TODO: Maybe do that inside server
-                    match sender.send(Message::Event(Event {
-                        data: EventData::SapperConnect,
-                        source: Some(address),
-                        target: None,
-                    })).await {
+                    match sender
+                        .send(Message::Event(Event {
+                            data: EventData::SapperConnect,
+                            source: Some(address),
+                            target: None,
+                        }))
+                        .await
+                    {
                         Ok(()) => {}
                         Err(error) => {
                             return Err(format!("{}", error));
@@ -146,7 +152,11 @@ impl Server {
         }
     }
 
-    async fn run_client_listening(address: SocketAddr, mut stream: TcpStream, mut sender: Sender<Message>) {
+    async fn run_client_listening(
+        address: SocketAddr,
+        mut stream: TcpStream,
+        mut sender: Sender<Message>,
+    ) {
         // TODO: Find a way to gracefully terminate a client listening
 
         loop {
@@ -154,11 +164,14 @@ impl Server {
 
             match stream.read_exact(&mut message).await {
                 Ok(()) => {
-                    match sender.send(Message::Event(Event {
-                        data: EventData::decode(&message),
-                        source: Some(address),
-                        target: None,
-                    })).await {
+                    match sender
+                        .send(Message::Event(Event {
+                            data: EventData::decode(&message),
+                            source: Some(address),
+                            target: None,
+                        }))
+                        .await
+                    {
                         Ok(()) => {
                             utils::log(&format!(
                                 "[SERVER] << {:?} from {}",
@@ -176,8 +189,7 @@ impl Server {
                     // TODO: Send local event to remove client
                     utils::log(&format!(
                         "[SERVER] {} disconnected. Reason: {}",
-                        address,
-                        error,
+                        address, error,
                     ));
 
                     break;
@@ -226,7 +238,9 @@ impl NetHandler for Server {
         loop {
             match self.receiver.try_recv() {
                 Ok(Message::Event(event)) => {
-                    self.game.events.fire(event.data, event.source, event.target);
+                    self.game
+                        .events
+                        .fire(event.data, event.source, event.target);
                 }
                 Ok(Message::Local(LocalMessage::Connection(client))) => {
                     self.clients.push(client);
@@ -255,24 +269,26 @@ impl NetHandler for Server {
 
         std::mem::swap(&mut self.clients, &mut clients);
 
-        clients = clients.into_iter().filter_map(|mut client| {
-            if
-                event.target.map_or(true, |t| t == client.address)
-                &&
-                event.source.map_or(true, |t| t != client.address)
-            {
-                utils::log(&format!(
-                    "[SERVER] >> {:?} to {:?}",
-                    event.data,
-                    event.target,
-                ));
+        clients = clients
+            .into_iter()
+            .filter_map(|mut client| {
+                if event.target.map_or(true, |t| t == client.address)
+                    && event.source.map_or(true, |t| t != client.address)
+                {
+                    utils::log(&format!(
+                        "[SERVER] >> {:?} to {:?}",
+                        event.data, event.target,
+                    ));
 
-                // TODO: Consider concurrent async
-                return block_on(client.stream.write_all(&encoded)).map(|_| client).ok();
-            } else {
-                return Some(client);
-            }
-        }).collect::<Vec<_>>();
+                    // TODO: Consider concurrent async
+                    return block_on(client.stream.write_all(&encoded))
+                        .map(|_| client)
+                        .ok();
+                } else {
+                    return Some(client);
+                }
+            })
+            .collect::<Vec<_>>();
 
         std::mem::swap(&mut self.clients, &mut clients);
     }
@@ -280,7 +296,8 @@ impl NetHandler for Server {
     fn on_sapper_connect(&mut self, address: SocketAddr) -> bool {
         let new_sapper_id;
 
-        #[allow(clippy::as_conversions, clippy::cast_possible_truncation)] // TODO: Find a way to resolve
+        // TODO: Find a way to resolve
+        #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
         {
             new_sapper_id = self.game.sappers.len() as u8;
         }
@@ -342,7 +359,7 @@ impl NetHandler for Server {
                 Err(_) => {
                     // TODO: Log error
                     break;
-                },
+                }
             };
 
             if let Some(mines_around) = cell.mines_around {
@@ -357,13 +374,9 @@ impl NetHandler for Server {
             }
 
             if cell.is_exploded {
-                self.game.events.fire(
-                    EventData::CellExplode {
-                        position,
-                    },
-                    None,
-                    Some(address),
-                );
+                self.game
+                    .events
+                    .fire(EventData::CellExplode { position }, None, Some(address));
             }
         }
 
@@ -379,7 +392,11 @@ impl NetHandler for Server {
     }
 
     fn on_sapper_discover(&mut self, id: u8, position: u16) -> bool {
-        struct SapperData { id: u8, score: u16 }
+        struct SapperData {
+            id: u8,
+            score: u16,
+        }
+
         let mut sapper_data = None;
 
         if let Some(sapper) = self.game.get_sapper_mut(id) {
@@ -402,13 +419,9 @@ impl NetHandler for Server {
                     );
                 }
                 DiscoveryResult::Failure => {
-                    self.game.events.fire(
-                        EventData::SapperDie {
-                            id: sapper_data.id,
-                        },
-                        None,
-                        None,
-                    );
+                    self.game
+                        .events
+                        .fire(EventData::SapperDie { id: sapper_data.id }, None, None);
                 }
                 DiscoveryResult::AlreadyDiscovered => {}
             }

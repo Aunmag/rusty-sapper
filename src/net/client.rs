@@ -4,12 +4,12 @@ use crate::event::EventManager;
 use crate::event::EVENT_SIZE;
 use crate::field::Field;
 use crate::game::Game;
-use crate::sapper::Sapper;
-use crate::sapper::SapperBehavior;
 use crate::net::LocalMessage;
 use crate::net::Message;
 use crate::net::NetHandler;
 use crate::net::NO_SENDER;
+use crate::sapper::Sapper;
+use crate::sapper::SapperBehavior;
 use crate::utils;
 use async_std::net::TcpStream;
 use async_std::prelude::*;
@@ -41,14 +41,12 @@ impl Client {
 
         let stream = TcpStream::connect(address)
             .await
-            .map_err(|e| format!("{}", e))
-            ?;
+            .map_err(|e| format!("{}", e))?;
 
         let thread = std::thread::Builder::new()
             .name("client".to_owned())
             .spawn(move || block_on(Self::run(stream, runner_sender, runner_receiver)))
-            .map_err(|e| format!("{}", e))
-            ?;
+            .map_err(|e| format!("{}", e))?;
 
         return Ok(Self {
             game: Game::new(Field::new(0, 0.0), Vec::new()),
@@ -68,8 +66,12 @@ impl Client {
         let mut error = None;
 
         {
-            let stream_listening = Client::run_stream_listening(&mut stream_reading, &mut sender).fuse();
-            let receiver_listening = Client::run_receiver_listening(&mut receiver, &mut stream_writing).fuse();
+            let stream_listening =
+                Client::run_stream_listening(&mut stream_reading, &mut sender).fuse();
+
+            let receiver_listening =
+                Client::run_receiver_listening(&mut receiver, &mut stream_writing).fuse();
+
             pin_mut!(stream_listening, receiver_listening);
 
             select! {
@@ -90,7 +92,9 @@ impl Client {
 
         #[allow(clippy::let_underscore_drop)] // TODO: Resolve
         if let Some(error) = error {
-            let _ = sender.send(Message::Local(LocalMessage::Error(error))).await; // TODO: Maybe handle result
+            let _ = sender
+                .send(Message::Local(LocalMessage::Error(error)))
+                .await; // TODO: Maybe handle result
         }
 
         utils::log(&"[CLIENT] Has terminated gracefully".to_string());
@@ -105,11 +109,14 @@ impl Client {
 
             match stream.read_exact(&mut message).await {
                 Ok(()) => {
-                    match sender.send(Message::Event(Event {
-                        data: EventData::decode(&message),
-                        source: None,
-                        target: None,
-                    })).await {
+                    match sender
+                        .send(Message::Event(Event {
+                            data: EventData::decode(&message),
+                            source: None,
+                            target: None,
+                        }))
+                        .await
+                    {
                         Ok(()) => {
                             utils::log(&format!("[CLIENT] << {:?}", EventData::decode(&message)));
                         }
@@ -131,16 +138,14 @@ impl Client {
     ) -> Result<(), String> {
         loop {
             match receiver.recv().await {
-                Some(Message::Event(event)) => {
-                    match stream.write_all(&event.data.encode()).await {
-                        Ok(()) => {
-                            utils::log(&format!("[CLIENT] >> {:?}", event.data));
-                        }
-                        Err(error) => {
-                            return Err(format!("{}", error));
-                        }
+                Some(Message::Event(event)) => match stream.write_all(&event.data.encode()).await {
+                    Ok(()) => {
+                        utils::log(&format!("[CLIENT] >> {:?}", event.data));
                     }
-                }
+                    Err(error) => {
+                        return Err(format!("{}", error));
+                    }
+                },
                 Some(Message::Local(LocalMessage::Connection(_))) => {
                     unreachable!();
                 }
@@ -175,7 +180,9 @@ impl NetHandler for Client {
         loop {
             match self.receiver.try_recv() {
                 Ok(Message::Event(event)) => {
-                    self.game.events.fire(event.data, event.source, event.target);
+                    self.game
+                        .events
+                        .fire(event.data, event.source, event.target);
                 }
                 Ok(Message::Local(LocalMessage::Connection(_))) => {
                     unreachable!();
@@ -211,12 +218,9 @@ impl NetHandler for Client {
     }
 
     fn on_sapper_spawn(&mut self, id: u8, position: u16) -> bool {
-        self.game.sappers.push(Sapper::new(
-            id,
-            SapperBehavior::Remote,
-            position,
-            0.0,
-        ));
+        self.game
+            .sappers
+            .push(Sapper::new(id, SapperBehavior::Remote, position, 0.0));
 
         return true;
     }

@@ -1,6 +1,6 @@
 use rand::prelude::*;
-use std::io::prelude::*;
 use std::fs::OpenOptions;
+use std::io::prelude::*;
 use std::time::Duration;
 use std::time::SystemTime;
 const IS_LOG_ENABLED: bool = true;
@@ -17,7 +17,11 @@ pub const fn difference(n1: u16, n2: u16) -> u16 {
     }
 }
 
-#[allow(clippy::as_conversions, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[allow(
+    clippy::as_conversions,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 pub const fn f64_to_u8_saturating_floor(value: f64) -> u8 {
     return value as u8;
 }
@@ -81,8 +85,18 @@ mod tests {
         assert_eq!(f64_to_u8_saturating_floor(-1.0), 0, "Less than min");
         assert_eq!(f64_to_u8_saturating_floor(256.0), 255, "Greater than max");
 
-        assert_eq!(f64_to_u8_saturating_floor(f64::NEG_INFINITY), 0, "Negative infinity");
-        assert_eq!(f64_to_u8_saturating_floor(f64::INFINITY), 255, "Positive infinity");
+        assert_eq!(
+            f64_to_u8_saturating_floor(f64::NEG_INFINITY),
+            0,
+            "Negative infinity"
+        );
+
+        assert_eq!(
+            f64_to_u8_saturating_floor(f64::INFINITY),
+            255,
+            "Positive infinity"
+        );
+
         assert_eq!(f64_to_u8_saturating_floor(f64::NAN), 0, "Not a number");
     }
 }

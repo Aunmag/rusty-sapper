@@ -84,7 +84,10 @@ pub trait NetHandler {
             EventData::FieldCreate { size } => {
                 was_processed = self.on_field_create(size);
             }
-            EventData::CellDiscover { position, mines_around } => {
+            EventData::CellDiscover {
+                position,
+                mines_around,
+            } => {
                 was_processed = self.on_cell_discover(position, mines_around);
             }
             EventData::CellExplode { position } => {

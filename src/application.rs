@@ -1,4 +1,10 @@
+use crate::field::Field;
 use crate::game::Game;
+use crate::net::client::Client;
+use crate::net::server::Server;
+use crate::net::NetHandler;
+use crate::sapper::Sapper;
+use crate::sapper::SapperBehavior;
 use crate::ui::button::Button;
 use crate::ui::input_number::InputNumber;
 use crate::ui::input_text::InputText;
@@ -7,9 +13,8 @@ use crate::ui::page::Page;
 use crate::ui::spacer::Spacer;
 use crate::ui::text::Text;
 use crate::ui::Event;
-use crate::net::NetHandler;
-use crate::net::client::Client;
-use crate::net::server::Server;
+use crate::utils;
+use futures::executor::block_on;
 use std::time::Duration;
 use termwiz::caps::Capabilities;
 use termwiz::color::ColorAttribute;
@@ -22,11 +27,6 @@ use termwiz::surface::Position;
 use termwiz::terminal::buffered::BufferedTerminal;
 use termwiz::terminal::new_terminal;
 use termwiz::terminal::Terminal;
-use crate::field::Field;
-use crate::sapper::Sapper;
-use crate::sapper::SapperBehavior;
-use futures::executor::block_on;
-use crate::utils;
 
 const MAIN: &str = "Main menu";
 const CONTINUE: &str = "Continue";
@@ -212,11 +212,7 @@ impl Application {
                 if self.is_menu {
                     terminal.draw_from_screen(&self.menu.render(), 0, 0);
                 } else if let Some(client) = self.client.as_ref() {
-                    terminal.draw_from_screen(
-                        &client.game.render(),
-                        0,
-                        0,
-                    );
+                    terminal.draw_from_screen(&client.game.render(), 0, 0);
                 }
 
                 terminal.add_change(Change::CursorPosition {
@@ -229,7 +225,10 @@ impl Application {
 
             self.screen_update = ScreenUpdate::None;
 
-            match terminal.terminal().poll_input(Some(Duration::from_secs_f64(0.1))) {
+            match terminal
+                .terminal()
+                .poll_input(Some(Duration::from_secs_f64(0.1)))
+            {
                 Ok(input) => {
                     let mut do_break = false;
 
@@ -372,9 +371,7 @@ impl Application {
             }
         }
 
-        let address = address.parse()
-            .map_err(|e| format!("{}", e))
-            ?;
+        let address = address.parse().map_err(|e| format!("{}", e))?;
 
         if is_host {
             let field = Field::new(field_size, mines_density);
@@ -390,10 +387,7 @@ impl Application {
                 ));
             }
 
-            self.server = Some(block_on(Server::new(
-                address,
-                Game::new(field, sappers),
-            ))?);
+            self.server = Some(block_on(Server::new(address, Game::new(field, sappers)))?);
         }
 
         self.client = None;

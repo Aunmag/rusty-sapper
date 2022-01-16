@@ -61,11 +61,7 @@ impl Field {
         self.mines.clear();
     }
 
-    pub fn discover(
-        &mut self,
-        position: u16,
-        events: &mut EventManager,
-    ) -> DiscoveryResult {
+    pub fn discover(&mut self, position: u16, events: &mut EventManager) -> DiscoveryResult {
         if self.mines.is_empty() {
             self.generate_mines(position);
         }
@@ -83,13 +79,7 @@ impl Field {
             // TODO: Probably I should delete the mine here too
             cell.is_exploded = true;
 
-            events.fire(
-                EventData::CellExplode {
-                    position,
-                },
-                None,
-                None,
-            );
+            events.fire(EventData::CellExplode { position }, None, None);
 
             return DiscoveryResult::Failure;
         } else {
@@ -102,7 +92,8 @@ impl Field {
                 }
             }
 
-            if let Some(cell) = self.get_cell_mut(position) { // TODO: Simplify, since I already should have `cell`
+            if let Some(cell) = self.get_cell_mut(position) {
+                // TODO: Simplify, since I already should have `cell`
                 cell.mines_around = Some(mines_around);
             }
 
@@ -164,7 +155,10 @@ impl Field {
 
     #[allow(clippy::integer_division)] // TODO: Try to resolve
     pub fn to_coordinate(&self, position: u16) -> (u16, u16) {
-        return (position % u16::from(self.size), position / u16::from(self.size));
+        return (
+            position % u16::from(self.size),
+            position / u16::from(self.size),
+        );
     }
 
     // TODO: Try to optimize
@@ -183,7 +177,7 @@ impl Field {
     pub fn render(&self, sappers: &[Sapper]) -> Surface {
         let mut surface = Surface::new(
             usize::from(self.size * 2).saturating_sub(1),
-            usize::from(self.size)
+            usize::from(self.size),
         );
 
         let mut player = None;

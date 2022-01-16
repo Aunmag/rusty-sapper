@@ -70,9 +70,7 @@ pub struct EventManager {
 
 impl EventManager {
     pub const fn new() -> Self {
-        return Self {
-            events: Vec::new(),
-        };
+        return Self { events: Vec::new() };
     }
 
     pub fn fire(

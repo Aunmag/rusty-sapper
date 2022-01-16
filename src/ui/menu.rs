@@ -1,8 +1,8 @@
 use crate::ui::button::Button;
-use crate::ui::Event;
 use crate::ui::page::Page;
 use crate::ui::spacer::Spacer;
 use crate::ui::text::Text;
+use crate::ui::Event;
 use termwiz::input::InputEvent;
 use termwiz::input::KeyCode;
 use termwiz::input::KeyEvent;

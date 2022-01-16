@@ -1,5 +1,5 @@
-use crate::event::EventManager;
 use crate::event::Event;
+use crate::event::EventManager;
 use crate::field::Field;
 use crate::sapper::Sapper;
 use termwiz::cell::AttributeChange;
@@ -42,12 +42,7 @@ impl Game {
 
                 while let Some(event) = events.pop() {
                     local_events.push(event.clone()); // TODO: Optimize
-
-                    self.events.fire(
-                        event.data,
-                        None,
-                        None,
-                    );
+                    self.events.fire(event.data, None, None);
                 }
             }
         }
