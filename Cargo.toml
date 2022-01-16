@@ -4,6 +4,10 @@ version = "1.0.0"
 authors = ["Aunmag <aunmag@gmail.com>"]
 edition = "2021"
 
+[profile.release]
+codegen-units = 1
+lto = "fat"
+
 [dependencies]
 async-std = "1.5"
 bincode = "1.2.1"
