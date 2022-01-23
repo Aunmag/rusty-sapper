@@ -1,9 +1,6 @@
 use rand::prelude::*;
-use std::fs::OpenOptions;
-use std::io::prelude::*;
 use std::time::Duration;
 use std::time::SystemTime;
-const IS_LOG_ENABLED: bool = true;
 
 pub fn is_chance(chance: f64) -> bool {
     return rand::thread_rng().gen::<f64>() < chance;
@@ -55,18 +52,6 @@ impl Timer {
 
     pub fn is_done(&self) -> bool {
         return self.target <= SystemTime::now();
-    }
-}
-
-pub fn log(data: &str) {
-    if IS_LOG_ENABLED {
-        OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .expect("Failed to initialize log file")
-            .write_all(format!("{}\r\n", data).as_bytes())
-            .expect("Failed to write into log");
     }
 }
 

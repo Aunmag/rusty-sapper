@@ -10,7 +10,6 @@ use crate::net::NetHandler;
 use crate::net::NO_SENDER;
 use crate::sapper::Sapper;
 use crate::sapper::SapperBehavior;
-use crate::utils;
 use async_std::net::TcpListener;
 use async_std::net::TcpStream;
 use async_std::prelude::*;
@@ -99,7 +98,7 @@ impl Server {
                 .await; // TODO: Maybe handle result
         }
 
-        utils::log(&"[SERVER] Has terminated gracefully".to_string());
+        log::info!("Server has terminated gracefully");
     }
 
     async fn run_connections_listening(
@@ -109,7 +108,7 @@ impl Server {
         loop {
             match listener.accept().await {
                 Ok((stream, address)) => {
-                    utils::log(&format!("[SERVER] {} has connected", address));
+                    log::info!("{} connected", address);
 
                     match sender
                         .send(Message::Local(LocalMessage::Connection(ServerClient {
@@ -173,24 +172,17 @@ impl Server {
                         .await
                     {
                         Ok(()) => {
-                            utils::log(&format!(
-                                "[SERVER] << {:?} from {}",
-                                EventData::decode(&message),
-                                address,
-                            ));
+                            log::debug!("<< {:?} from {}", EventData::decode(&message), address);
                         }
                         Err(error) => {
-                            utils::log(&format!("[SERVER] {}", error));
+                            log::error!("{}", error);
                             break;
                         }
                     }
                 }
                 Err(error) => {
                     // TODO: Send local event to remove client
-                    utils::log(&format!(
-                        "[SERVER] {} disconnected. Reason: {}",
-                        address, error,
-                    ));
+                    log::info!("{} disconnected. Reason: {}", address, error);
 
                     break;
                 }
@@ -275,10 +267,7 @@ impl NetHandler for Server {
                 if event.target.map_or(true, |t| t == client.address)
                     && event.source.map_or(true, |t| t != client.address)
                 {
-                    utils::log(&format!(
-                        "[SERVER] >> {:?} to {:?}",
-                        event.data, event.target,
-                    ));
+                    log::debug!(">> {:?} to {:?}", event.data, event.target);
 
                     // TODO: Consider concurrent async
                     return block_on(client.stream.write_all(&encoded))

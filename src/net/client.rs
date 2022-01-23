@@ -10,7 +10,6 @@ use crate::net::NetHandler;
 use crate::net::NO_SENDER;
 use crate::sapper::Sapper;
 use crate::sapper::SapperBehavior;
-use crate::utils;
 use async_std::net::TcpStream;
 use async_std::prelude::*;
 use futures::executor::block_on;
@@ -97,7 +96,7 @@ impl Client {
                 .await; // TODO: Maybe handle result
         }
 
-        utils::log(&"[CLIENT] Has terminated gracefully".to_string());
+        log::info!("Client has terminated gracefully");
     }
 
     async fn run_stream_listening(
@@ -118,7 +117,7 @@ impl Client {
                         .await
                     {
                         Ok(()) => {
-                            utils::log(&format!("[CLIENT] << {:?}", EventData::decode(&message)));
+                            log::debug!("<< {:?}", EventData::decode(&message));
                         }
                         Err(error) => {
                             return Err(format!("{}", error));
@@ -140,7 +139,7 @@ impl Client {
             match receiver.recv().await {
                 Some(Message::Event(event)) => match stream.write_all(&event.data.encode()).await {
                     Ok(()) => {
-                        utils::log(&format!("[CLIENT] >> {:?}", event.data));
+                        log::debug!(">> {:?}", event.data);
                     }
                     Err(error) => {
                         return Err(format!("{}", error));

@@ -25,12 +25,14 @@
     clippy::must_use_candidate,
     clippy::needless_return,
     clippy::pattern_type_mismatch,
+    clippy::print_stderr,
     clippy::redundant_else,
     clippy::shadow_reuse,
     clippy::shadow_same,
     clippy::shadow_unrelated,
     clippy::unreachable,
     clippy::unwrap_used, // TODO: Resolve later
+    clippy::use_debug,
     clippy::wildcard_enum_match_arm,
 )]
 
@@ -45,7 +47,51 @@ mod ui;
 mod utils;
 
 use crate::application::Application;
+use anyhow::Context;
+use anyhow::Result;
+use log::LevelFilter;
+use simplelog::CombinedLogger;
+use simplelog::ConfigBuilder;
+use simplelog::LevelPadding;
+use simplelog::WriteLogger;
+use std::fs::File;
 
 fn main() {
+    if let Err(error) = init_logger() {
+        eprintln!("{:?}", error);
+    }
+
+    log::info!(
+        "Starting {} v{}",
+        env!("CARGO_PKG_NAME"),
+        env!("CARGO_PKG_VERSION"),
+    );
+    log::info!("Logging in UTC");
+
     Application::new().run();
+
+    log::info!("Terminating");
+}
+
+fn init_logger() -> Result<()> {
+    fn inner() -> Result<()> {
+        let file_name = format!("{}.log", env!("CARGO_PKG_NAME"));
+
+        let file = File::create(&file_name)
+            .with_context(|| format!("Failed to crate the output file ({})", file_name))?;
+
+        let config = ConfigBuilder::default()
+            .set_time_format_str("%F %T")
+            .set_level_padding(LevelPadding::Right)
+            .set_target_level(LevelFilter::Error)
+            .set_thread_level(LevelFilter::Trace)
+            .build();
+
+        let logger = WriteLogger::new(LevelFilter::Info, config, file);
+
+        CombinedLogger::init(vec![logger])?;
+        return Ok(());
+    }
+
+    return inner().context("Failed to initialize logger");
 }
